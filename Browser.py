@@ -59,9 +59,9 @@ class Browser: #The Class of interest.  Allows user to browse all files on any f
 
 			#DownloadFits_Single(self.listbox.get(self.listbox.curselection()))	
 			#Go to Some downloader class.  Make sure to get the path right for fits
-			path = self.TABLE.pwd() + '/' +  self.listbox.get(self.listbox.curselection())
+			#path = self.TABLE.pwd() + '/' +  self.listbox.get(self.listbox.curselection())
 
-			print "Downloadable File",path	
+			print "Downloadable File",self.listbox.get(self.listbox.curselection())	
 
 	def Back(self): #Go up one directory
 		try:
@@ -80,7 +80,7 @@ def check_file(FILENAME, TABLE): #Shitty way to check for a file
 		return False
 
 
-table_browser = Browser(root,BOSS) #Starts the Browser
+table_browser = Browser(root,SDSS) #Starts the Browser
 
 Tk.mainloop()
 
