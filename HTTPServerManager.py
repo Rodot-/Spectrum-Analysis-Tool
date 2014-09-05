@@ -14,7 +14,11 @@ class URL:
 
 	def cwd(self, path): #Change Directory
 
-		if self.address.rfind('.') < len(self.address) - 7 and path != '..':
+		if path.rfind('.') != -1 and path != '..':
+
+			flurp
+
+		elif self.address.rfind('.') < len(self.address) - 7 and path != '..':
 		
 			if not self.address.endswith('/'):
 
@@ -27,6 +31,10 @@ class URL:
 
 			self.address = self.address[0:self.address.rfind('/')]
 			self.address = self.address[0:self.address.rfind('/')]
+
+		else:
+
+			flurp
 
 
 		html = urllib.urlopen(self.address)
@@ -68,3 +76,4 @@ class URL:
                         nlst.append(str(name))
 
 		return nlst	
+
