@@ -247,12 +247,15 @@ class Interface: #The Main Plotting Window
 	def MARK_INTERESTING(self):
 		self.Spectra.markInteresting()
 		self.Spectra.ClearPlot()
-		self.UPDATE_PLOTS()
+		pool.spawn(self.UPDATE_PLOTS())
+		pool.spawn(self.Spectra.saveInteresting())
+
 
 	def UNMARK_INTERESTING(self):
 		self.Spectra.unmarkInteresting()
 		self.Spectra.ClearPlot()
-		self.UPDATE_PLOTS()
+		pool.spawn(self.UPDATE_PLOTS())
+		pool.spawn(self.Spectra.saveInteresting())
 
 		###End Test stuff
 
@@ -773,17 +776,17 @@ class PlotManager:
 
 	def markInteresting(self):
 
-		for i in self.data:
+		for i in self.Fulldata:
 
 			if i in self.currentData:
 
 				i['Interesting'] = 'Interesting'
-
+		
 		print "Marked as Interesting"
 	
 	def unmarkInteresting(self):
 
-                for i in self.data:
+                for i in self.Fulldata:
 
                         if i in self.currentData:
 
@@ -793,7 +796,7 @@ class PlotManager:
 
 	def saveInteresting(self):
 
-		DataManager.saveInterestingObjects(self.data)
+		DataManager.saveInterestingObjects(self.Fulldata)
 
 	def SwitchToInteresting(self):
 

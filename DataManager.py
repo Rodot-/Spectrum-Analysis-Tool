@@ -7,11 +7,6 @@ import time
 
 pool = eventlet.GreenPool(size = 2000000)
 
-# Write Data Formatters.  Data should be in the form of [Name, Bool, MJD, Plate, Fiber, RA, DEC, Lambda, Flux, GroupID]
-
-#def GetFileList():
-
-
 def BuildFitsList(path):
 
 	try:
@@ -26,7 +21,7 @@ def BuildFitsList(path):
 
 	try:
 		
-		print "Good Path:",path
+		#print "Good Path:",path
 
 		RA = fitsHeader['RAOBJ']
 
@@ -73,7 +68,7 @@ def groupData(): #matches all data, exports to Matches.rep
 
         X = GetRaDec()
         print "Starting Matching"
-        X = np.sort(X, axis = 0)
+        X = np.sort(X, order = 'DEC')
 
 	t0 = time.time()
 
@@ -88,6 +83,7 @@ def groupData(): #matches all data, exports to Matches.rep
         for i in range(len(X)):
                 if countdown < 0:
                         countdown = 0
+			print "Negative Countdown Warning!"
 
                 if countdown == 0:
                         countdown += 1
@@ -95,15 +91,15 @@ def groupData(): #matches all data, exports to Matches.rep
                         singleGroup.append(X[i])
                         #compare object at X[i] with X[i - 1] and lower, stop when RA diff. is larger than DELTA
                         j = i - 1
-                        while j >= 0 and X[i][0] - DELTA < X[j][0]:
-                                if DELTA > math.sqrt((X[i][0]-X[j][0])**2 + (X[i][1]-X[j][1])**2):
+                        while j >= 0 and X[i]['DEC'] - DELTA < X[j]['DEC']:
+                                if DELTA > math.sqrt((X[i]['cos(RA)']-X[j]['cos(RA)'])**2 + (X[i]['DEC']-X[j]['DEC'])**2):
                                         singleGroup.append(X[j])
                                         countdown += 1
                                 j -= 1
                         #repeat, but with X[i + 1] and higher 
                         j = i + 1
-                        while j < len(X) and X[i][0] + DELTA > X[j][0]:
-                                if DELTA > math.sqrt((X[i][0]-X[j][0])**2 + (X[i][1]-X[j][1])**2):
+                        while j < len(X) and X[i]['DEC'] + DELTA > X[j]['DEC']:
+                                if DELTA > math.sqrt((X[i]['cos(RA)']-X[j]['cos(RA)'])**2 + (X[i]['DEC']-X[j]['DEC'])**2):
                                         singleGroup.append(X[j])
                                         countdown += 1
                                 j += 1
@@ -137,6 +133,8 @@ def saveInterestingObjects(DataArray): #Saves the list of interesting objects
 		InterestingFile.write(str(j['MJD'])+', '+str(j['PLATEID'])+', '+str(j['FIBERID'])+', '+str(j['RA'])+', '+str(j['DEC'])+', '+str(j['REDSHIFT']) + ', ' + j['FILENAME']+ ', ' + 'Interesting' + '\n')
 
 		#InterestingFile.write(str(j[0]) + '\n')
+	InterestingFile.close()
+
 
 	print "Saved"
 
@@ -211,18 +209,15 @@ def ExportInterestingCoords():
 
 	for j in values:
 
-		for k in j[1]:
-
-			Writer.write(str(j[0])+', ')
-			File = fits.open(k)
-			MJD = File[0].header['MJD']
-			PLATEID = File[0].header['PLATEID']
-			FIBERID = File[0].header['FIBERID']
-			RA = File[0].header['RAOBJ']
-			DEC = File[0].header['DECOBJ']
-			Z = File[0].header['Z']
-			Writer.write(str(MJD)+', '+str(PLATEID)+', '+str(FIBERID)+', '+str(RA)+', '+str(DEC)+', '+str(Z)+'\n')
-			File.close()
+		Writer.write(str(j['GroupID'])+', ')
+		MJD = j['MJD']
+		PLATEID = j['PLATEID']
+		FIBERID = j['FIBERID']
+		RA = j['RA']
+		DEC = j['DEC']
+		Z = j['REDSHIFT']
+		Writer.write(str(MJD)+', '+str(PLATEID)+', '+str(FIBERID)+', '+str(RA)+', '+str(DEC)+', '+str(Z)+'\n')
+	Writer.close()
 
 
 #ExportInterestingCoords()
