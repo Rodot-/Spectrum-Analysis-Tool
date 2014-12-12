@@ -3,10 +3,12 @@ import os
 import urllib
 import ftplib
 import HTTPServerManager as HTTP
+import numpy as np
 import eventlet
 from eventlet.green import urllib2
-
-pool = eventlet.GreenPool(200000)
+from SpectralFileConversionTool import ChangeSDSS, ChangeBOSS
+from DataManager import groupData
+pool = eventlet.GreenPool(size = 1000)
 
 def CheckFiles(): #Checks if the Following Directories Exist, Creats them if not
 
@@ -61,13 +63,54 @@ def DownloadFits_Single(server, path): #Downloads a single fits file
 
 		temp.close()
 
+		#Check for the target_fibermap.fits file and tries to get it
+
+		if not os.path.isfile('downloads/target_fibermap.fits'):
+
+			temp2 = open("downloads/target_fibermap.fits", 'wb')
+
+			LOCtemp = ftplib.FTP(server[1], server[2], server[3])
+
+			LOCtemp.cwd('bossredux')
+	
+			LOCtemp.retrbinary('RETR %s' % 'target_fibermap.fits', temp2.write)
+			temp2.close()
+
+		try:
+			print "Updating"
+			ChangeBOSS("downloads/BOSS/"+FileName)
+		except:
+			os.system("rm downloads/BOSS/"+FileName)
+			print "Can't Use That One"
+
+		if os.path.isfile('downloads/BOSS/'+FileName):
+			os.system("rm downloads/BOSS/"+FileName)
+
+
+
 	elif server[0] == 'URL': #Checks the server we are using
 
+		#print server[1]
+
 		temp = urllib.URLopener() #Creats URLopener instance
+
+		return
 
 		FileName = path[path.rfind('/')+1:] #Gets filename
 
 		pool.spawn(temp.retrieve(server[1] + path, "downloads/SDSS/"+FileName)) #Saves the file name
+
+		try:
+			print "Updating"	
+			ChangeSDSS("downloads/SDSS/"+FileName)
+
+		except:
+			os.system("rm downloads/SDSS/"+FileName)
+			print "Can't Use That One"
+	
+		#if os.path.isfile('downloads/SDSS/'+FileName):
+		#	os.system("rm downloads/SDSS/"+FileName)
+
 
 
 def DownloadFits_All(server, path): #Saves all files in a directory
@@ -86,7 +129,9 @@ def DownloadFits_All(server, path): #Saves all files in a directory
 
 	                        if not os.path.isfile("downloads/BOSS/"+i):
 
+					print "Getting", i
 					DownloadFits_Single(server,path + i)
+
 
 	if server[0] == 'URL':
 
@@ -94,24 +139,67 @@ def DownloadFits_All(server, path): #Saves all files in a directory
 	
 		DirFiles = LOC.nlst() #Gets a list of files
 
-		for i in DirFiles:
+		############
 
-			if i.find('.fit') != -1: #Check for fits
+		URLlist = [server[1] + path + i for i in DirFiles if i.find('.fit') != -1 and not os.path.isfile("downloads/SDSS/" + i)]
 
-				if not os.path.isfile("downloads/SDSS/" + i):	
+		def fetch(url):
+			body = eventlet.green.urllib2.urlopen(url).read()
+			a = open("downloads/SDSS/" + url[url.rfind('/')+1:], 'wb')
+			a.write(body)
+			a.close()
+                        try:
+                        	print "Updating"
+                                ChangeSDSS("downloads/SDSS/"+url[url.rfind('/')+1:])
 
-					DownloadFits_Single(server,path + i)	
+                        except:
+                                os.system("rm downloads/SDSS/"+url[url.rfind('/')+1:])
+                                print "Can't Use That One"
+
+			return url[url.rfind('/')+1:]			
+
+
+		for i in pool.imap(fetch, URLlist):
+			print i
+
+			#return temp, url[url.rfind('/')+1:]
+
+		#for temp, FileName in pool.imap(fetch, URLlist):
+		#	print FileName		
 	
-		
+		#	#open("downloads/SDSS/" + FileName, 'wb').write(temp)
+
+	        # #       try:
+        	##              print "Updating"
+                #	        ChangeSDSS("downloads/SDSS/"+FileName)
+
+                #	except:
+                #        	os.system("rm downloads/SDSS/"+FileName)
+                #        	print "Can't Use That One"
+
+	
+		#####################
+
+	print "Done Grabbing.  You Sure Are Greedy."	
 
 S = LoadServers()
 
 #DownloadFits_All(S[0], 'bossredux/v5_7_1/0000/')
 
-#DownloadFits_All(S[1], '1d_26/0266/1d/')
+#DownloadFits_All(S[1], '1d_26/0269/1d/')
+'''
+for n in range(266,2975):
 
-for n in range(278,280):
-	DownloadFits_All(S[1], '1d_26/0'+str(n)+'/1d/')
+	try:
+		DownloadFits_All(S[1], '1d_26/0'+str(n)+'/1d/')
+	except:
+		try:
+			DownloadFits_All(S[1], '1d_26/' + str(n) + '/1d/')
+		except:
 
+			print "No Available Data Here"
 
+	print str((n - 266.0)/(2975-266.0))+"%"
+
+'''
 
