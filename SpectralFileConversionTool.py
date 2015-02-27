@@ -8,15 +8,25 @@ Purpose: Changes the formats of spectrum files to be used in the Spectrum Analys
 Instruction: Place this program in the same directory as your "downloads" folder used for the Spectrum Analysis Tool.  Run $ python SpectralFileConversionTool.py from the console.  This tool does not need to be run on data from DR8 or above, but it will significantly reduce the file sizes.  This tool does not need to be run on DR7 or earlier as long as no data from DR8 or later is present. 
 
 Note: In order to run, you must have the most recent version of astropy.  Use "$ conda update astropy" to update to the most recent version.
+
+Command Line Arguments:
+
+-c //Run Conversion
+
+--indir=[DIRECTORY] // Input Directory (Default is downloads/SDSS/)
+
+--outdir=[DIRECTORY] // Output Directory (Default is downloads/SDSS)
+	// **Will Overwrite Directory Contents**
+
 '''
 #from __future__ import print_function
 from astropy.io import fits
 import sys
 import numpy as np
 import os
+import getopt
 
-
-if os.path.isfile('downloads/target_fibermap.fits'):
+if os.path.isfile('downloads/target_fibermap.fits'): #Only Needed For Rev-Map
 
         Maps = fits.open('downloads/target_fibermap.fits')
         maps = np.asarray(Maps[1].data)
@@ -27,101 +37,98 @@ else:
 
         print 'Cant Find target_fibermap.fits'
 
+def ChangeSpec(FileName): #This is the function that actually does the reformatting
 
+	InputFile = "/".join((InputDirectory, FileName))
+	OutputFile = "/".join((OutputDirectory, FileName))
 
+	with fits.open(InputFile) as Sdata:#Opens the .fits file you want to modify
 
-def ChangeSDSS(FileName): #This is the function that actually does the reformatting
+		try:
 
-	Sdata = fits.open(FileName) #Opens the .fits file you want to modify
-
-	if Sdata[0].header['EXPID01'] == 'Converted': #Checks if this file has already been converted.  If so, closes the file, and ends the function
+			if Sdata[0].header['EXPID01'] == 'Converted': #Checks if this file has already been converted.  If so, closes the file, and ends the function
+		
+				Sdata.close() 
 	
-		Sdata.close() 
+				return 0
+	
+		except:
 
-		return 0
+			print "Unknown Error"
 
-	MJD = Sdata[0].header['MJD'] #Gets the MJD
-
-	PLATE = Sdata[0].header['PLATEID'] #Gets the Plate ID
-
-	FIBER = Sdata[0].header['FIBERID'] #Gets the Fiber ID
-
-	COEFF0 = Sdata[0].header['COEFF0'] #Gets COEFF0
+		MJD = Sdata[0].header['MJD'] #Gets the MJD
+	
+		PLATE = Sdata[0].header['PLATEID'] #Gets the Plate ID
+	
+		FIBER = Sdata[0].header['FIBERID'] #Gets the Fiber ID
+	
+		COEFF0 = Sdata[0].header['COEFF0'] #Gets COEFF0
  
-	COEFF1 = Sdata[0].header['COEFF1'] #Gets COEFF1
-
-	if MJD < 55000: #Data comes from DR7 or earlier 
-
-		Z = Sdata[0].header['Z']
-
-		SPEC = Sdata[0].data[0] #Spectrum Data
+		COEFF1 = Sdata[0].header['COEFF1'] #Gets COEFF1
 	
-		RA = Sdata[0].header['RAOBJ'] #RA
-
-		DEC = Sdata[0].header['DECOBJ'] #DEC
+		try: #Data comes from spSpec- format 
 	
-		headers = fits.Header() #Defines the new headers
+			Z = Sdata[0].header['Z'] #Redshift
+	
+			SPEC = Sdata[0].data[0] #Spectrum Data
+		
+			RA = Sdata[0].header['RAOBJ'] #RA
+	
+			DEC = Sdata[0].header['DECOBJ'] #DEC
+		
 
+		except: #data comes from spec- fomat
+		
+			Z = Sdata[2].data['Z'][0] #Redshift
+
+			SPEC = Sdata[1].data['flux'] #Spectrum
+		
+			RA = Sdata[0].header['PLUG_RA'] #RA
+		
+			DEC = Sdata[0].header['PLUG_DEC'] #DEC
+		
+		headers = fits.Header() #Defines new headers
+		
+		#Setting up headers
+		
 		headers.set('RAOBJ', RA)
 		headers.set('DECOBJ', DEC)
-
-
-	else: #data comes from DR8 or Later
-		
-		Z = Sdata[2].data['Z'][0]
-
-		SPEC = Sdata[1].data['flux'] #Spectrum
-		
-		RA = Sdata[0].header['PLUG_RA'] #RA
-		
-		DEC = Sdata[0].header['PLUG_DEC'] #DEC
-		
-		headers = fits.Header() #Defines the new headers
+		headers.set('MJD', MJD)
+		headers.set('PLATEID', PLATE)
+		headers.set('FIBERID', FIBER)
+		headers.set('COEFF0', COEFF0)
+		headers.set('COEFF1', COEFF1)
+		headers.set('Z', Z)
+		headers.set('EXPID01', 'Converted')
 	
-		headers.set('RAOBJ', RA)
-		headers.set('DECOBJ', DEC)
+		LOGLAM = Sdata[1].data['loglam']	
 
-	#Setting up headers
-	headers.set('MJD', MJD)
-	headers.set('PLATEID', PLATE)
-	headers.set('FIBERID', FIBER)
-	headers.set('COEFF0', COEFF0)
-	headers.set('COEFF1', COEFF1)
-	headers.set('Z', Z)
-	headers.set('EXPID01', 'Converted')
-
-	LOGLAM = np.arange(0,len(SPEC)) #Calculating log(lambda)
-	LOGLAM = LOGLAM * COEFF1 + COEFF0
-
-	#Setting up the columns (Make sure not to adjust formats!)
-	col1 = fits.Column(name='flux',format='E', array=SPEC) 
-	col2 = fits.Column(name='LogLambda',format='D', array=LOGLAM)
+		#Setting up the columns (Make sure not to adjust formats!)
+		col1 = fits.Column(name='flux',format='E', array=SPEC) 
+		col2 = fits.Column(name='LogLambda',format='D', array=LOGLAM)
+		
+		#Creating column Definition
+		cols = fits.ColDefs([col1,col2])
 	
-	#Creating column Definition
-	cols = fits.ColDefs([col1,col2])
+		#Making the Binary Table
+		BinTabHDU = fits.BinTableHDU.from_columns(cols)
+	
+		#Creating the Primary HDU
+		PrimHDU = fits.PrimaryHDU(header = headers)
+	
+		#Putting the HDU list together
+		hdulist = fits.HDUList([PrimHDU,BinTabHDU])
+	
+		Overwrite(InputFile)
 
-	#Making the Binary Table
-	BinTabHDU = fits.BinTableHDU.from_columns(cols)
-
-	#Creating the Primary HDU
-	PrimHDU = fits.PrimaryHDU(header = headers)
-
-	#Putting the HDU list together
-	hdulist = fits.HDUList([PrimHDU,BinTabHDU])
-
-	if os.path.isfile(FileName): #Check if the old file exists and removes it
-
-	        os.system("rm "+FileName)
-
-
-	hdulist.writeto(FileName) #Writes the new HDU lsit with the original file name
-	Sdata.close(FileName) #Closes the .fits file
+		hdulist.writeto(OutputFile) #Writes the new HDU lsit with the original file name
+		Sdata.close(InputFile) #Closes the .fits file
 
 
 
 
 
-def ChangeBOSS(FileName):
+def ChangeBOSS(FileName): #Converts Data from BOSS reverberation mapping.  Depreciated
 
 	Sdata = fits.open(FileName) #Opens the .fits file you want to modify
 
@@ -213,17 +220,86 @@ def ChangeBOSS(FileName):
 	if os.path.isfile(FileName):
 		os.system("rm "+FileName)
 
-'''
-f = 0 #Counter
 
-for i in os.listdir("downloads/BOSS"): #Looking for files in the "downloads" directory
-         if os.path.isfile(os.path.join("downloads/BOSS",i)): #Check if the file is in the directory
+def RemoveExisting(FileName): #Removes FileName
 
-		f += 1 #Count
+	if os.path.isfile(FileName): #Check if the old file exists and removes it
+		os.system(" ".join(("rm",FileName)))
 
-		ChangeBOSS("downloads/BOSS/"+i) #runt the function
+def DoNothing(arg): #Does nothing.  I promise
 
-		#Print The count and the file name being looked at
-		print str(f)+"  "+i+"     " 
+	pass
 
-'''
+ChangeSDSS = ChangeSpec #For Version transition Purposes
+
+def ConvertDirectory(): #Converst all files in a directory.  Outputs Failed Files
+	if InputDirectory != OutputDirectory:
+
+		Cache = os.listdir(OutputDirectory)
+		FileList = list(set(os.listdir(InputDirectory)) - set(Cache))
+		
+	else:
+	
+		FileList = os.listdir(InputDirectory)
+
+	print len(FileList), "Files Found"	
+	print "Running Conversion"
+
+	with open('Failures.txt', 'wb') as Failures:
+
+		Failures.write(" ".join((InputDirectory, OutputDirectory)))
+
+		for File in FileList:
+	
+			try:
+				print "Converting:", File
+				if File.endswith('.fits'): ChangeSpec(File)
+
+			except:
+
+				Failures.write("".join((File,'\n')))
+				print "Could Not Convert:", File
+
+
+InputDirectory = 'downloads/SDSS' #Default InputDirectory
+OutputDirectory = 'downloads/SDSS' #Default Output Directory
+FunctionToRun = DoNothing
+
+if len(sys.argv) > 1: #Command Line argument Handling
+
+	try:
+		opts, args = getopt.getopt(sys.argv[1:],"c",["indir=","outdir="])
+
+	except getopt.GetoptError:
+
+		print "Error: GetoptError"
+		sys.exit(2)
+
+	for opt, arg in opts:
+		
+		if opt == "--indir":
+
+			InputDirectory = arg
+
+		if opt == "--outdir":
+
+			OutputDirectory = arg
+
+		if opt == "-c":
+
+			FunctionToRun = ConvertDirectory
+
+#Determine whether or not to overwrite the directory
+
+if InputDirectory == OutputDirectory:
+
+	Overwrite = RemoveExisting
+
+else:
+
+	Overwrite = DoNothing
+
+
+FunctionToRun() #Runs Whatever the command line tells it to
+
+
