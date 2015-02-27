@@ -230,7 +230,7 @@ def getMatchesArray(): #Parses the MAtches.rep file into an array of matches spe
 
 	try:
 
-		InterestingFile = np.loadtxt('InterestingMatches.rep',delimiter = ', ',usecols = (0,1,2), dtype={'names':['MJD','PLATEID','FIBERID'], 'formats': ["<S8","<S8","<S8"]})
+		InterestingFile = np.loadtxt('InterestingMatches.csv',delimiter = ', ',usecols = (0,1,2), dtype={'names':['MJD','PLATEID','FIBERID'], 'formats': ["<S8","<S8","<S8"]})
 	
 		InterestingFlag = np.core.defchararray.add(np.core.defchararray.add(InterestingFile['MJD'], InterestingFile['PLATEID']), InterestingFile['FIBERID'])
 
