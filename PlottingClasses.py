@@ -57,6 +57,7 @@ class PlottingWindow(Tk.Frame):
 			plt.setp([a.get_xticklabels() for a in self.fig.axes[:-1]], visible=False)
 	
 		self.lines.append([])
+		self.ax[-1].autoscale_view(True, True, True)
 
 	def RemoveSubplot(self, ax_index = -1):
 		#####################################
@@ -93,8 +94,7 @@ class PlottingWindow(Tk.Frame):
 		# in a Subplot at the Desired Index  #
 		######################################
 
-		for i in range(len(self.lines[ax_index])):
-			self.lines[ax_index][i].set_data([],[])
+		for i in range(len(self.lines[ax_index])): self.lines[ax_index][i].set_data([],[])
 
 	def update(self):
 		######################################
@@ -103,7 +103,7 @@ class PlottingWindow(Tk.Frame):
 		######################################
 
 		T0 = time.time()
-		self.canvas.draw()
+		self.fig.canvas.draw()
 		print "Update Plot Time: ", time.time() - T0
 
 	def HideLine(self, line):
