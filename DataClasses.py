@@ -20,9 +20,11 @@ class Data:
 		print "Conversion to Spectra Complete"
 
 		self.MainDataArray = self.SortBy('REDSHIFT')
+
+		self.DataPosition = np.searchsorted(np.asarray(self.MainDataArray)['REDSHIFT'],[0.000001])[0]
 	
 		print "Sorting Complete"
-		self.DataPosition = 0
+		#self.DataPosition = 0
 		CachedData = [[]] #Stores Data from previously opened files
 		self.currentDataArray = self.MainDataArray
 		self.currentData = []
@@ -60,6 +62,10 @@ class Data:
 
 		#print self.currentData[0].dtype.names[0]
 
+	def MarkAs(self, string): #Sets the intesting column to string
+
+		for i in self.currentData: i['Interesting'] = string	
+
 	def LoadDataFile(self): #Loads the Spectra data
 
 		T0 = time.clock()
@@ -80,7 +86,7 @@ class Data:
 
 	def DefineCurrentData(self): #Builds the list of matching spectra	
 
-		self.currentData = self.DefineData('GroupID', self.currentDataArray)
+		self.currentData = self.DefineData('GroupID', self.MainDataArray)
 
 	def ViewMarkedData(self, Value, Parent): #Chose what kind of data to view, Value can be "interesting" or "not_interesting"
 
@@ -102,11 +108,11 @@ class Data:
 
 		T0 = time.clock()
 
-		currentGroup = self.currentDataArray[self.DataPosition]['GroupID']
+		currentGroup = self.currentData[0]['GroupID']
 
 		Max = len(self.currentDataArray) - 1
 
-		while self.currentDataArray[self.DataPosition]['GroupID'] == currentGroup:
+		while self.currentDataArray[self.DataPosition]['GroupID'] == currentGroup or float(self.currentDataArray[self.DataPosition]['REDSHIFT']) < 0.0000001:
 			if self.DataPosition == Max:
 
 				self.DataPosition = -1
@@ -121,11 +127,11 @@ class Data:
 
 		T0 = time.clock()
 
-		currentGroup = self.currentDataArray[self.DataPosition]['GroupID']
+		currentGroup = self.currentData[0]['GroupID']
 
 		Max = len(self.currentDataArray)
 
-		while self.currentDataArray[self.DataPosition]['GroupID'] == currentGroup:
+		while self.currentDataArray[self.DataPosition]['GroupID'] == currentGroup or float(self.currentDataArray[self.DataPosition]['REDSHIFT']) < 0.0000001:
 
 			if self.DataPosition == 0:
 
@@ -171,6 +177,26 @@ class Data:
 		self.ViewMarkedData(NewFlag, self.MainDataArray)
 		self.DefineCurrentData()
 
+	def saveInterestingObjects(self): #Saves the list of interesting objects
+
+		T0 = time.time()
+
+        	#Get all objects tagged "Interesting"
+
+        	InterestingList = self.DefineData('Interesting',self.currentDataArray, 'Interesting')
+
+        	InterestingFile = open('InterestingMatches.csv','wb')
+        	InterestingFile.write("#MJD, PLATEID, FIBERID, RA, DEC, Z, FILENAME, ARGS\n")
+
+        	#Saves these objects in the same format as above
+
+                [InterestingFile.write(", ".join((str(j['MJD']),str(j['PLATEID']),str(j['FIBERID']),str(j['RA']),str(j['DEC']),str(j['REDSHIFT']),str(j['FILENAME']),'Interesting', '\n'))) for j in InterestingList]
+
+	        InterestingFile.close()
+
+        	print "Save Time: ", time.time() - T0
+
+
 class Spectrum(np.ndarray): #A class containing Information about a spectrum
 
 	def __new__(cls, DataPoint):
@@ -197,6 +223,10 @@ class Spectrum(np.ndarray): #A class containing Information about a spectrum
 
 		self.Flux = getattr(obj, 'Flux', [])
 		self.Lambda = getattr(obj,'Lambda',[])
+
+	def getHeaders(self):
+
+		return np.array([self[i] for i in self.dtype.names])
 
 #data = Data()
 #print "Done"
