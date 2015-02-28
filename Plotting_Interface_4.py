@@ -30,12 +30,11 @@ class Window(Tk.Frame): #Example of a window application inside a frame
 	
 				self.data.DataPosition = int(sys.argv[1])
 
+		#Frames
+
 		self.Navigation = Tk.Frame(self)
 		self.Manipulation = Tk.Frame(self)
 		self.Properties = Tk.Frame(self)
-
-
-		#########################################
 		self.PLOT = PlottingWindow(self)
 		self.PLOT.AddSubplot()
 		self.PLOT.AddSubplot(self.PLOT.ax[0], combineX = True)
@@ -45,6 +44,8 @@ class Window(Tk.Frame): #Example of a window application inside a frame
 		self.Slines = DataTables.BasicDataDisplay(self.Properties, len(Science.Slines_Values))
 
 		self.Slines.setTitles(Science.Slines.dtype.names, 8)
+
+		#Buttons
 
 		self.NextButton = Tk.Button(self.Navigation, text = 'Next', command = self.NEXT)
 		self.PreviousButton = Tk.Button(self.Navigation, text = 'Previous', command = self.PREV)
@@ -56,6 +57,8 @@ class Window(Tk.Frame): #Example of a window application inside a frame
 		self.ToggleMark = Tk.Button(self.Manipulation, text = 'Interesting', command = self.toggleMark)
 
 		self.SaveSession = Tk.Button(self.Manipulation, text = 'Save', command = self.data.saveInterestingObjects)
+
+		#Packing
 
 		self.Manipulation.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
 		self.Navigation.pack(side = Tk.BOTTOM, expand = 0, fill = Tk.X)
@@ -70,17 +73,22 @@ class Window(Tk.Frame): #Example of a window application inside a frame
 		self.Toggle2D.pack(side = Tk.RIGHT, expand = 1, fill = Tk.X)
 		self.SaveSession.pack(side = Tk.RIGHT, expand = 1, fill = Tk.X)
 
+		#Plot Properties
+
 		self.PLOT.ax[0].set_ylabel(r'$\mathtt{Flux}$')
 		self.PLOT.ax[1].set_ylabel(r'$\mathtt{Flux}$')
 		self.PLOT.ax[1].set_xlabel(r'$\mathtt{\lambda \/ (\AA)}$')
 		self.PLOT.ax[0].set_xlabel(r'$\mathtt{\lambda \/ (\AA)}$')
 
+		#Default Transformations
 
 		self.Transform = []
 		self.Transform.append(Transformations.smooth)
 		self.Transform.append(Transformations.smooth)
 
 		self.NEXT()
+	
+		#Cursor
 
                 self.cursor = MultiCursor(self.PLOT.fig.canvas,(self.PLOT.ax[0], self.PLOT.ax[1]), color='#999999', linewidth=1.0 , useblit = True)
 	
