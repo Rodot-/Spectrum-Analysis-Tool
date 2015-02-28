@@ -11,6 +11,10 @@ else:
 	import tkinter as Tk
 
 PATH = 'downloads/SDSS/'
+if len(sys.argv) > 1:
+
+	PATH = sys.argv[1]
+
 
 class Data:
 
@@ -86,7 +90,7 @@ class Data:
 
 	def DefineCurrentData(self): #Builds the list of matching spectra	
 
-		self.currentData = self.DefineData('GroupID', self.MainDataArray)
+		self.currentData = self.DefineData('GroupID', self.currentDataArray)
 
 	def ViewMarkedData(self, Value, Parent): #Chose what kind of data to view, Value can be "interesting" or "not_interesting"
 
@@ -175,6 +179,8 @@ class Data:
 			NewFlag = 'Not_Interesting'
 
 		self.ViewMarkedData(NewFlag, self.MainDataArray)
+		self.DataPosition = 0
+		self.NextGroup()
 		self.DefineCurrentData()
 
 	def saveInterestingObjects(self): #Saves the list of interesting objects
@@ -185,7 +191,7 @@ class Data:
 
         	InterestingList = self.DefineData('Interesting',self.currentDataArray, 'Interesting')
 
-        	InterestingFile = open('InterestingMatches.csv','wb')
+        	InterestingFile = open('InterestingMatches_1.csv','wb')
         	InterestingFile.write("#MJD, PLATEID, FIBERID, RA, DEC, Z, FILENAME, ARGS\n")
 
         	#Saves these objects in the same format as above
@@ -193,6 +199,8 @@ class Data:
                 [InterestingFile.write(", ".join((str(j['MJD']),str(j['PLATEID']),str(j['FIBERID']),str(j['RA']),str(j['DEC']),str(j['REDSHIFT']),str(j['FILENAME']),'Interesting', '\n'))) for j in InterestingList]
 
 	        InterestingFile.close()
+
+		os.system("mv InterestingMatches_1.csv InterestingMatches.csv")
 
         	print "Save Time: ", time.time() - T0
 
@@ -212,7 +220,7 @@ class Spectrum(np.ndarray): #A class containing Information about a spectrum
 
 	def getSpectrum(self):
 
-		Data = fits.open("".join((PATH, str(self['FILENAME']))))
+		Data = fits.open("/".join((PATH, str(self['FILENAME']))))
 
 		self.Flux = Data[1].data['flux']
 		self.Lambda = 10**Data[1].data['LogLambda']
