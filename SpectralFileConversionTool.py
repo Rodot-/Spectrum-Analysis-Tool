@@ -13,9 +13,9 @@ Command Line Arguments:
 
 -c //Run Conversion
 
---indir=[DIRECTORY] // Input Directory (Default is downloads/SDSS/)
+--indir=DIRECTORY // Input Directory (Default is downloads/SDSS/)
 
---outdir=[DIRECTORY] // Output Directory (Default is downloads/SDSS)
+--outdir=DIRECTORY // Output Directory (Default is downloads/SDSS)
 	// **Will Overwrite Directory Contents**
 
 '''
@@ -226,7 +226,7 @@ def RemoveExisting(FileName): #Removes FileName
 	if os.path.isfile(FileName): #Check if the old file exists and removes it
 		os.system(" ".join(("rm",FileName)))
 
-def DoNothing(arg): #Does nothing.  I promise
+def DoNothing(arg=None): #Does nothing.  I promise
 
 	pass
 
