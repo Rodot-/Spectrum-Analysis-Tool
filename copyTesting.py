@@ -330,7 +330,7 @@ class Data(object):
 
 		self.DataPosition = 0
 
-		self.MIN_GROUP_SIZE = 2
+		self.MIN_GROUP_SIZE = 1
 
 		TAGNAMES = self.tagList.viewkeys()
 
