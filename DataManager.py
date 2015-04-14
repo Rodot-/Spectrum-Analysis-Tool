@@ -1,94 +1,23 @@
 from astropy.io import fits
 import os
+from Config import PATH
 import numpy as np
 import math
-import eventlet
 import time
 import MatchingFunctions
 import fileinput
+import sys
 
 BuildFitsList = MatchingFunctions.BuildFitsList
 FHV = MatchingFunctions.FindHeaderValue
 
-pool = eventlet.GreenPool(size = 100)
-'''
-def BuildFitsList(path):
-
-	try:
-
-		fitsHeader = fits.open("downloads/SDSS/" + path)[0].header
-		direct = "downloads/SDSS/"
-	
-	except:
-		
-		fitsHeader = fits.open("downloads/BOSS/" + path)[0].header
-		direct = "downloads/BOSS/"
-
-	try:
-		
-		#print "Good Path:",path
-
-		RA = fitsHeader['RAOBJ']
-
-		DEC = fitsHeader['DECOBJ']
-
-		MJD = fitsHeader['MJD']
-	
-		PLATE = fitsHeader['PLATEID']
-
-		FIBER = fitsHeader['FIBERID']
-	
-		Z = fitsHeader['Z']
-
-	except:
-
-		print "Bad File, Deleting"
-		os.system("rm " + direct + path)
-		return
-
-	return (math.cos(RA), DEC, RA,  path, Z, MJD, PLATE, FIBER)
-
-def GetRaDec(): #Gets a filename, ra and dec of a spectra for matching
-
-	print "Getting Data"
-
-	temp = np.loadtxt("Matches.rep", delimiter=', ', dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64"]})
-
-        RADEC = [(math.cos(i['RA']), i['DEC'],i['RA'],i['FILENAME'], i['REDSHIFT'], i['MJD'], i['PLATEID'],i['FIBERID']) for i in temp]
-
-	RADEC = list(set(RADEC))
-	
-	Cache = set(temp['FILENAME'])
-
-	print "Looking for New Files"
-
-	SDSSDir = set(os.listdir("downloads/SDSS")) - Cache
-
-	BOSSDir = set(os.listdir("downloads/BOSS")) - Cache
-
-	print len(SDSSDir) + len(BOSSDir), "New Files Found"
-
-	print "Looking For Files in downloads/SDSS..."
-
-	for i in pool.imap(BuildFitsList, SDSSDir):
-		RADEC.append(i)
-		#print i
-
-	print "Looking For Files in downloads/BOSS..."
-
-	for i in pool.imap(BuildFitsList, BOSSDir):
-		RADEC.append(i)
-		#print i
-
-        return np.array(RADEC,dtype = [('cos(RA)','<f8'),('DEC','<f8'),('RA','<f8'),('FILENAME', '<S64'),('Z','<f4'),('MJD','<i4'),('PLATE','<i4'),('FIBER','<i4')] )
-'''
 def GetRaDec(): #Gets a filename, ra and dec of a spectra for matching
 
 	print("Getting Data")
 
 	try:
 
-		temp = np.loadtxt("Matches.rep", delimiter=', ', dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64"]})
+		temp = np.loadtxt("Matches.rep", delimiter=', ',dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64"]})
 
 
 		if len(temp) == 0:
@@ -108,11 +37,13 @@ def GetRaDec(): #Gets a filename, ra and dec of a spectra for matching
 
 	print("Looking for New Files")
 
-	FileList = set(os.listdir("downloads/SDSS")) - set(temp['FILENAME'])
+	FileList = set(os.listdir(PATH)) - set(temp['FILENAME'])
 
 	#if len(set(os.listdir("downloads/SDSS"))) < len(set(temp['FILENAME'])):
 
 	#	raise Exception("Bad Math on FileList")
+
+	FileList = set([i for i in FileList if i.endswith('.fits')])
 
 	nFiles = len(FileList)
 
@@ -120,7 +51,7 @@ def GetRaDec(): #Gets a filename, ra and dec of a spectra for matching
 
 	print(str(nFiles) + " New Files Found")
 
-	print("Extracting Headers...")
+	print("Extracting Data...")
 
 	RADEC = np.empty((TotalListLength), dtype = [('cos(RA)','<f8'),('DEC','<f8'),('RA','<f8'),('FILENAME', '<S64'),('Z','<f4'),('MJD','<i4'),('PLATE','<i4'),('FIBER','<i4')])
 
@@ -129,12 +60,14 @@ def GetRaDec(): #Gets a filename, ra and dec of a spectra for matching
 	RADEC_index = len(CachedTable)
 
 	t0 = time.time()
-	
-	for i in pool.imap(BuildFitsList, FileList):
-		RADEC[RADEC_index] = i
-		RADEC_index += 1
-		print RADEC_index
-	
+
+	RADEC[RADEC_index:] = map(BuildFitsList, FileList)
+
+	#for i in map(BuildFitsList, FileList):
+	#	RADEC[RADEC_index] = i
+	#	RADEC_index += 1
+	#	print RADEC_index
+
 	#for i in iter(FileList):
 	#	RADEC[RADEC_index] = BuildFitsList(i)
 	#	RADEC_index += 1
@@ -157,7 +90,7 @@ def groupData(): #matches all data, exports to Matches.rep
 
         output = open('Matches.rep', 'wb')
 
-	output.write('#GroupID, MJD, PLATEID, FIBERID, RA, DEC, REDSHIFT, FILENAME, ARGS\n')
+	output.write('#GroupID, MJD, PLATEID, FIBERID, RA, DEC, REDSHIFT, FILENAME, ARGS, TAGS\n')
 
         DELTA = (2.0/60.0/60.0)**2 #2 arcseconds in degrees
 	delta = 2.0/60.0/60.0 #sqrt(DELTA)
@@ -168,7 +101,7 @@ def groupData(): #matches all data, exports to Matches.rep
 	PLEASE_SKIP = set()
 	def Scribble(obj): #Writes given data to the output file
 
-		output.write(", ".join((str(groupID),str(obj['MJD']),str(obj['PLATE']),str(obj['FIBER']),str(obj['RA']),str(obj['DEC']),str(obj['Z']),obj['FILENAME'], 'Not_Interesting\n')))
+		output.write(", ".join((str(groupID),str(obj['MJD']),str(obj['PLATE']),str(obj['FIBER']),str(obj['RA']),str(obj['DEC']),str(obj['Z']),obj['FILENAME'], 'Not_Interesting','None\n')))
 
         for i in xrange(OBJECTS):
                 if i in PLEASE_SKIP:
@@ -226,27 +159,45 @@ def saveInterestingObjects(DataArray): #Saves the list of interesting objects
 
 	print "Saved"
 
-def getMatchesArray(): #Parses the MAtches.rep file into an array of matches spectra
+def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAtches.rep file into an array of matches spectra
+	if not os.path.isfile('Matches.rep'):
+
+		print "Could not Locate 'Matches.rep', Please Run Browser.py"
+
+		sys.exit(2)
 
 	try:
 
-		InterestingFile = np.loadtxt('InterestingMatches.csv',delimiter = ', ',usecols = (0,1,2), dtype={'names':['MJD','PLATEID','FIBERID'], 'formats': ["<S8","<S8","<S8"]})
-	
-		InterestingFlag = np.core.defchararray.add(np.core.defchararray.add(InterestingFile['MJD'], InterestingFile['PLATEID']), InterestingFile['FIBERID'])
+		#InterestingFile = np.loadtxt(InterestingFile,delimiter = ', ',usecols = (0,1,2,8), dtype={'names':['MJD','PLATEID','FIBERID', 'TAGS'], 'formats': ["<S64","<S64","<S64","<S128"]})
+
+		#InterestingFlag = np.core.defchararray.add(np.core.defchararray.add(InterestingFile['MJD'], InterestingFile['PLATEID']), InterestingFile['FIBERID'])
+		InterestingFlag = np.loadtxt(InterestingFile,delimiter = ', ',usecols = (6,8), dtype={'names':['FILENAME', 'TAGS'], 'formats': ["<S64","<S128"]})
 
 	except:
 
 		InterestingFlag = []
 
-	matchList = np.loadtxt("Matches.rep", delimiter=', ', dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64"]})
+	matchList = np.loadtxt("Matches.rep", delimiter=', ', dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting", "TAGS"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64","<S256"]})
 
 	print "Text File Loaded"
 
-	IDlist = np.core.defchararray.add(np.core.defchararray.add(matchList['MJD'].astype('<S8'), matchList['PLATEID'].astype('<S8')), matchList['FIBERID'].astype('<S8'))
+	#IDlist = np.core.defchararray.add(np.core.defchararray.add(matchList['MJD'].astype('<S64'), matchList['PLATEID'].astype('<S64')), matchList['FIBERID'].astype('<S64'))
+	IDlist = dict(zip(matchList['FILENAME'], matchList))
+	for i in InterestingFlag:
+		IDlist[i['FILENAME']]['TAGS'] = i['TAGS']
+		IDlist[i['FILENAME']]['Interesting'] = 'Interesting'	
 
-	indecies = np.in1d(IDlist, InterestingFlag, assume_unique = True)
-	
-	matchList['Interesting'][indecies] = 'Interesting'
+	#indecies = np.in1d(IDlist, InterestingFlag, assume_unique = True)
+	#for i in np.where(indecies)[0]:
+
+	#	for j in xrange(len(InterestingFlag)):
+
+	#		if IDlist[i] == InterestingFlag[j]:
+
+	#			matchList['TAGS'][i] = InterestingFile['TAGS'][j]
+	#			matchList['Interesting'][i] = 'Interesting'
+
+
 
 	print "Number of Interesting Files: ", len(InterestingFlag)
 
