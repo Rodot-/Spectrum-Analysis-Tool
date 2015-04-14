@@ -1,22 +1,15 @@
 import sys
 import numpy as np
 import time
-import DataClasses
-import eventlet
-
-pool = eventlet.GreenPool(size = 10)
+from Config import PATH
+import copyTesting as DataClasses
+from astropy.io import fits
 
 if sys.version_info[0] < 3:
         import Tkinter as Tk
 else:
         import tkinter as Tk
 
-'''PATH = 'downloads/SDSS/'
-
-Fdata = DataClasses.Data()
-data = Fdata.MainDataArray
-print "Data Imported"
-'''
 
 
 class BasicDataDisplay(Tk.LabelFrame): #Class That dispalys n number of labels
@@ -43,10 +36,138 @@ class BasicDataDisplay(Tk.LabelFrame): #Class That dispalys n number of labels
 		for t in xrange(size):
 
 			self.labels[t]["text"] = "".join((self.titles[t],('{:<%s}' % width).format(str(DataArray[t]))))
-
 		
+class AdvancedDataDisplay(Tk.Toplevel):
 
+	Fields = ['MJD','PLATE','FIBERID','CLASS','SUBCLASS','Z','Z_ERR','SN_MEDIAN_ALL']
+
+	def __init__(self, title, Data):
+	
+		Tk.Toplevel.__init__(self)
+		self.title(title)
+		self.basicDataDisplays = []
+		self.frame = Tk.Frame(self)
+		self.subframe = [Tk.Frame(self.frame) for i in xrange(10)]
+		self.data = Data
+		self.lastGroupID = 0
+		self.updater = Tk.Button(self,text = "Update", command = lambda x=0: self.update()) 
+		self.frame.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+		self.updater.pack(side = Tk.BOTTOM, expand = 0, fill = Tk.X)
+		#for i in self.subframe: i.pack(side = Tk.LEFT, expand = 0, fill = Tk.BOTH)
+	
+	def update(self):
 		
+		Group = self.data()
+		if Group.ID == self.lastGroupID:
+			self.deiconify()
+			return
+		self.lastGroupID = Group.ID
+		Files = ["/".join((PATH, i['FILENAME'])) for i in Group.sortedReturn()]
+		lenFields = len(self.Fields)
+		lenFiles = len(Files)
+		lenBDD = len(self.basicDataDisplays)
+		for i in xrange(lenBDD):
+			if i >= lenFiles:
+				self.basicDataDisplays[i].pack_forget()
+				self.subframe[(i+4)/4].pack_forget()
+		for i in xrange(lenFiles):
+			if i >= lenBDD:
+				self.basicDataDisplays.append(BasicDataDisplay(self.subframe[i/4], lenFields, w = 32))
+				self.basicDataDisplays[i].setTitles(self.Fields)
+			self.basicDataDisplays[i].pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+			self.subframe[i/4].pack(side = Tk.LEFT, expand = 1, fill = Tk.BOTH)
+			self.basicDataDisplays[i].setData(self.getFields(Files[i]))	
+		self.resizable(True, True)
+		self.deiconify()
+
+	
+	def getFields(self, Filename):
+
+		currentFile = fits.open(Filename)
+		data = [str(currentFile[2].data[i][0]) for i in self.Fields]
+		currentFile.close()
+		return data 
+
+
+class BasicCheckDisplay(Tk.LabelFrame): #Class That dispalys n number of checkbuttons
+
+	def __init__(self, master, n, w = 0, asButton = False, Anch = Tk.W):
+	
+		Tk.LabelFrame.__init__(self, master)
+		self.titles = np.empty(n, dtype = '<S16')
+		self.buttons = []
+		self.w = w
+		self.data = np.empty(n, dtype = '<f8')
+		self.asButton = asButton
+		self.Anch = Anch
+		self.endOfTitle = None
+		if asButton: self.endOfTitle = -1
+		self.buttonvars = [Tk.IntVar() for k in xrange(n)]
+		[self.buttons.append(Tk.Checkbutton(self, variable = self.buttonvars[i], width = w, justify = Tk.LEFT, anchor = Anch, font = ("TkDefaultFont", 10, 'bold'), indicatoron = not asButton)) for i in xrange(n)]
+		[i.pack(side = Tk.TOP, expand = 0, fill = Tk.BOTH) for i in self.buttons]
+
+	def repack(self, data = None):
+
+		if data is None:
+
+			data = self.data
+
+		for i in self.buttons: i.pack_forget()
+
+		pos = np.lexsort([self.titles, data])
+
+		for i in reversed(pos): self.buttons[i].pack(side = Tk.TOP, expand = 0, fill = Tk.BOTH)
+
+	def setTitles(self, TitleArray, width=20): #Sets the titles of the labels 
+		self.wid = width
+		size = len(TitleArray)
+
+		for t in xrange(size):
+
+			self.titles[t] = self.buttons[t]["text"] = FormattedTitle = ('{:<%s}' % width).format("".join((" ",TitleArray[t][:self.endOfTitle])))
+
+	def setData(self, DataArray, width=20): #Fills the Label; with information
+
+		self.width = width
+		size = len(DataArray)
+
+		for t in xrange(size):
+
+			if DataArray[t] == 0:
+				D = ""
+			else:
+				D = str(DataArray[t])
+			self.data[t] = DataArray[t]
+			self.buttons[t]["text"] = "".join((self.titles[t],('{:>%s}' % width).format(D)))
+
+	def setCommands(self, commandArray):
+	
+		size = len(commandArray)
+
+		for t in xrange(size):
+
+			self.buttons[t]["command"] = commandArray[t]
+
+	def setStates(self, maskArray):
+
+		for i in xrange(len(maskArray)):
+
+			if maskArray[i]:
+				self.buttons[i].select()
+			else:
+				self.buttons[i].deselect()
+				
+	def newCheck(self):
+
+		self.buttonvars.append(Tk.IntVar())		
+		self.buttons.append(Tk.Checkbutton(self, variable = self.buttonvars[-1], width = self.w, justify = Tk.LEFT, anchor = self.Anch, font = ("TkDefaultFont", 10, 'bold'), indicatoron = not self.asButton))
+		self.buttons[-1].pack(side = Tk.TOP, expand = 0, fill = Tk.BOTH)
+		self.titles = list(self.titles)
+		self.data = list(self.data)
+		self.data.append(0)
+		self.titles.append("")
+		self.titles = np.array(self.titles)
+		self.data = np.array(self.data)
 
 class FullDataTable(Tk.Frame):
 
@@ -82,8 +203,6 @@ class FullDataTable(Tk.Frame):
 		except StopIteration:
 
 			pass
-		
-
 
 class Window(Tk.Frame): #Example of a window application inside a frame
 
