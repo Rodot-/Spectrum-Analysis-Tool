@@ -6,6 +6,8 @@ import math
 import os
 import time
 import fileinput
+from Config import PATH
+from astropy.io import fits
 #import eventlet
 #from FileManager import LoadServers
 #import resource
@@ -34,7 +36,7 @@ def FileInputList(FILELIST):
 		Header = [FindHeaderValue(raw, BODY) for raw in INFO]
 
 
-
+'''
 def BuildFitsList(path):
 
 	info = INFO
@@ -50,6 +52,25 @@ def BuildFitsList(path):
         	Header = [FindHeaderValue(raw,BODY) for raw in info]
 	
 	return (math.cos(Header[1]), Header[0], Header[1], path, Header[2], Header[3], Header[4], Header[5])
+'''
+
+def BuildFitsList(path):
+
+	Fopen = fits.open
+
+	try:
+		with Fopen("/".join((PATH,path)), cache = False) as FILE:
+
+        		Data = FILE[2].data
+			FILE.close() 
+	
+		return (math.cos(Data['PLUG_RA'][0]), Data['PLUG_DEC'][0], Data['PLUG_RA'][0], path, Data['Z'][0], Data['MJD'][0], Data['PLATE'][0], Data['FIBERID'][0])
+
+	except (IOError, IndexError):
+
+		print path
+		return ( )
+
 
 '''
 def writeFitsHeader(body):
