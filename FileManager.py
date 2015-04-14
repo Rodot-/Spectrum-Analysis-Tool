@@ -28,7 +28,7 @@ CheckFiles()
 
 def LoadServers(): #Loads in server information from servers.rep
 	
-	servers = open("servers.rep", 'rb') 
+	servers = open("resource/servers.rep", 'rb') 
 
 	serverlist = []
 
