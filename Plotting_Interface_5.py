@@ -228,12 +228,12 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 	def UpdatePlots(self):
 
 		self.plotCurrent(0)
-		#if len(self.data()) != 2:
-		#	T = Transformations.smooth
-		#	self.Toggle2D["state"] = Tk.DISABLED
-		#else:
-		#	T = self.Transform[1]
-		#	self.Toggle2D["state"] = Tk.NORMAL
+		if len(self.data()) < 2:
+			T = Transformations.smooth
+			self.Toggle2D["state"] = Tk.DISABLED
+		else:
+			T = self.Transform[1]
+			self.Toggle2D["state"] = Tk.NORMAL
 		self.plotCurrent(1, self.Transform[1])
 		self.PLOT.update()
 		self.updateFields()
