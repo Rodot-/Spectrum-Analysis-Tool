@@ -18,6 +18,8 @@ BOSS = ['FTP', 'sdssrm.obs.carnegiescience.edu','sdssrm','rev-map'] #FTP Server
 
 SDSS = ['URL','http://das.sdss.org/spectro/']
 
+SDSS12 = ['URL','http://mirror.sdss3.org/sas/dr12/sdss/spectro/redux/26/spectra/']
+
 root = Tk.Tk()
 root.wm_title('File Browser')
 
@@ -124,7 +126,7 @@ def check_file(FILENAME, TABLE): #Shitty way to check for a file
 		return False
 
 
-table_browser = Browser(root,SDSS) #Starts the Browser
+table_browser = Browser(root,SDSS12) #Starts the Browser
 
 Tk.mainloop()
 
