@@ -1,9 +1,12 @@
-import numpy as np
 
-#conf = np.loadtxt('resource/SAT.conf', dtype = {"names":('PATH'), "formats":("<S256")})
+options = dict()
+with open('resource/SAT.conf', 'rb') as Config:
 
-PATH = open('resource/SAT.conf', 'rb').read()
+	for line in Config:
+		items = line.split()
+		if len(items) == 3:
+			options.setdefault(items[0], items[2])
 
-PATH = PATH.split()[2]
 
-#PATH = conf['PATH'][0]
+PATH = options['PATH']
+MIN_GROUP_SIZE = int(options['MIN_GROUP_SIZE'])
