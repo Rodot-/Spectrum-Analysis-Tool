@@ -301,11 +301,24 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 		print "Save Time: ", time.time() - T0
 
-
 class App(Tk.Tk):
+
 	def __init__(self):
 
 		Tk.Tk.__init__(self)
+
+		msgBox = Tk.Toplevel(self)
+		msgBox.overrideredirect(True)
+		msgBox.wm_geometry("200x50-583+334")
+		msgFrame = Tk.LabelFrame(msgBox, padx = 5, pady = 5)
+		msgname = Tk.Label(msgFrame, text = "Spectrum Analysis Tool")
+		msg = Tk.Label(msgFrame, text = "Loading Spectra...")
+		msgname.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+		msg.pack(side = Tk.BOTTOM, expand = 1, fill = Tk.BOTH)
+		msgFrame.pack(expand = 1, fill = Tk.BOTH)
+		self.withdraw()
+		msgBox.update()
+
 		self.title("Plotting Interface")
 		self.geometry('1200x600-100+100')
 		self.protocol("WM_DELETE_WINDOW",self.Quit)
@@ -325,6 +338,8 @@ class App(Tk.Tk):
 		self.menubar.add_cascade(label = "New", menu = self.new)
 
 		self.config(menu = self.menubar)
+		msgBox.withdraw()
+		self.deiconify()
 
 	def viewObjectInfo(self):
 
@@ -347,6 +362,7 @@ class App(Tk.Tk):
 
 		def StopReplacing(EntryAndText):
 			global ReplaceText
+			if EntryAndText[0] == None: return
 			if EntryAndText[0].get() == EntryAndText[1]:
 				EntryAndText[0].delete(0,Tk.END)
 			if EntryAndText[0] == Name and Value.get() == "":
@@ -370,6 +386,7 @@ class App(Tk.Tk):
 			value = Value.get()
 			try:
 				if value == "Value (Float)": value = 0
+				if name.find(" ")+1: raise ValueError
 				value = float(value)
 				name = "".join((name,":"))
 				Science.TAGS.setdefault(name, value)
@@ -380,10 +397,12 @@ class App(Tk.Tk):
 				self.MainWindow.ToggleSlineView.setTitles([i[0:-1] for i in Science.TAGS.keys()], width)
 				self.MainWindow.ToggleSlineMark.setCommands([lambda x=i,y=j,z=k: self.MainWindow.toggleMark(x,y,z) for i,j,k in zip(Science.TAGS.keys(), self.MainWindow.ToggleSlineMark.buttons, self.MainWindow.ToggleSlineMark.buttonvars)])	
 				self.MainWindow.ToggleSlineView.setCommands([lambda x=i,y=j,z=k: self.MainWindow.toggleSline(x,y,z) for i,j,k in zip(Science.TAGS.keys(), self.MainWindow.ToggleSlineView.buttons, self.MainWindow.ToggleSlineView.buttonvars)])	
-
 				self.MainWindow.data.appendTag(name)
 				Dbox.withdraw()
 				self.MainWindow.updateFields()
+				self.MainWindow.ToggleSlineMark.repack()
+				self.MainWindow.ToggleSlineView.repack(self.MainWindow.ToggleSlineMark.data)
+	
 			except ValueError:
 				ErrorMsg = Tk.Toplevel()
 				label = Tk.Label(ErrorMsg, text = "Invalid Value")
@@ -404,7 +423,6 @@ class App(Tk.Tk):
 
 		self.MainWindow.saveData()
 		self.after_idle(self.quit)
-
 
 app = App()
 app.mainloop()
