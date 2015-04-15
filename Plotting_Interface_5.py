@@ -1,6 +1,5 @@
 from PlottingClasses import *
 from matplotlib.widgets import MultiCursor
-#import DataClasses
 from Config import PATH
 import copyTesting as DataClasses
 import numpy as np
@@ -192,12 +191,18 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 		self.data.update()
 		self.UpdatePlots()
+		#self.backgroundTasks()
 
-	def backgroundTasks(self, n):
+	def backgroundTasks(self, n = 0):
 
-		if n < len(self.data.FullData):
+		if n < len(self.data.currentData) and n < self.data.DataPosition + 30:
 			for i in self.data[self.data.FullData[n]].getMembers(): i.getSpectrum()
-			#self.after(1000,self.backgroundTasks, n+1)
+			self.after(5000,self.backgroundTasks, n+1)
+		else:
+
+			self.after(60000, self.backgroundTasks, self.data.DataPosition+1)
+			self.saveData('Autosave.csv')
+
 
 	def toggleMark(self, tag, button, var):
 
@@ -265,7 +270,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 			Button['relief'] = Tk.RAISED
 
-	def saveData(self):
+	def saveData(self, Filename = "InterestingMatches.csv"):
 
 		T0 = time.time()
 		fields = ['MJD','PLATEID','FIBERID','RA','DEC','REDSHIFT','FILENAME','Interesting']
@@ -278,7 +283,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
                                 MarkedObjects = np.union1d(MarkedObjects,np.array([j() for j in self.data[i].getMembers()]))
 	
-		InterestingFile = open('InterestingMatches.csv','wb')
+		InterestingFile = open(Filename,'wb')
 		InterestingFile.write('#MJD, PLATEID, FIBERID, RA, DEC, Z, FILENAME, ARGS, TAGS\n')
 
 
@@ -328,7 +333,12 @@ class App(Tk.Tk):
 		self.menubar = Tk.Menu(self)
 		self.views = Tk.Menu(self.menubar)
 		self.new = Tk.Menu(self.menubar)
-		self.MainWindow = PlottingInterface(self, DataClasses.Data())
+		SpectraData = DataClasses.Data()
+		msg['text'] = "Loading Interface..."
+		msgBox.update()
+		self.MainWindow = PlottingInterface(self, SpectraData)
+		msg['text'] = "Ready!"
+		msgBox.update()
 		self.MainWindow.pack(expand = 1, fill = Tk.BOTH)
 
 		self.new.add_command(label = "Tag", command = self.newTag)
