@@ -164,7 +164,7 @@ def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAt
 
 		print "Could not Locate 'Matches.rep', Please Run Browser.py"
 		print "Would You Like to Build it Frome", PATH , "?"
-		yn = input("y/N: ").upper()
+		yn = raw_input("y/N: ").upper()
 		if yn == 'Y':
 			groupData()
 			return getMatchesArray()
