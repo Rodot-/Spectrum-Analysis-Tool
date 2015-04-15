@@ -2,6 +2,11 @@ README.md
 
 Will Add More Documentation Later.
 
+Requires Most Recent version of Anaconda Python
+
+Requires eventlet concurrent processing library.
+
+     pip install eventlet
 
 To Run Software: 
 
