@@ -98,7 +98,7 @@ for line in LocationList:
 def fetch(url):
 	try:
 		body = eventlet.green.urllib2.urlopen(url).read()
-		a = open("downloads/BOSS/" + url[url.rfind('/')+1:], 'wb')
+		a = open("downloads/SDSS/" + url[url.rfind('/')+1:], 'wb')
 		a.write(body)
 		a.close()
 		#try:
