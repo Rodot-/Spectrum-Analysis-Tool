@@ -191,7 +191,6 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 		self.data.update()
 		self.UpdatePlots()
-		#self.backgroundTasks()
 
 	def backgroundTasks(self, n = 0):
 
@@ -333,6 +332,7 @@ class App(Tk.Tk):
 		self.menubar = Tk.Menu(self)
 		self.views = Tk.Menu(self.menubar)
 		self.new = Tk.Menu(self.menubar)
+		self.tools = Tk.Menu(self.menubar)
 		SpectraData = DataClasses.Data()
 		msg['text'] = "Loading Interface..."
 		msgBox.update()
@@ -344,12 +344,21 @@ class App(Tk.Tk):
 		self.new.add_command(label = "Tag", command = self.newTag)
 		self.views.add_command(label="Tags", command=self.tagSelection)
 		self.views.add_command(label="Info", command=self.viewObjectInfo)
+		self.tools.add_command(label="Download", command = self.browseServer)
+
 		self.menubar.add_cascade(label = "View", menu = self.views)
 		self.menubar.add_cascade(label = "New", menu = self.new)
+		self.menubar.add_cascade(label = "Tools", menu = self.tools)
 
 		self.config(menu = self.menubar)
 		msgBox.withdraw()
 		self.deiconify()
+
+	def browseServer(self):
+
+		window = Tk.Toplevel(self)
+		browser = DataTables.ServerBrowser(window)
+		browser.pack(expand = 1, fill = Tk.BOTH)
 
 	def viewObjectInfo(self):
 

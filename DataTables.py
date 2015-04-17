@@ -1,7 +1,8 @@
 import sys
 import numpy as np
 import time
-from Config import PATH
+import Browser
+from Config import PATH, INFO_FIELDS
 import copyTesting as DataClasses
 from astropy.io import fits
 
@@ -10,7 +11,31 @@ if sys.version_info[0] < 3:
 else:
         import tkinter as Tk
 
+class ServerBrowser(Tk.Frame):
 
+	def __init__(self, master):
+
+		self.master = master
+		Tk.Frame.__init__(self, master)
+		self.server_list = Browser.LoadServers()
+		self.server_listbox = Tk.Listbox(self)
+		self.selectButton = Tk.Button(self, text = 'select', command = self.select)
+		self.server_listbox.pack(expand = 1, fill = Tk.BOTH)
+		self.selectButton.pack(side = Tk.BOTTOM, expand = 0, fill = Tk.X)
+		self.populate()
+
+	def populate(self):
+
+		for i in self.server_list.keys():
+
+			self.server_listbox.insert(Tk.END, i)
+
+	def select(self):
+
+		selection = self.server_listbox.get(self.server_listbox.curselection())
+		browser = Browser.Browser(self.master, self.server_list[selection])
+		browser.pack()	
+		self.server_listbox.pack_forget()
 
 class BasicDataDisplay(Tk.LabelFrame): #Class That dispalys n number of labels
 
@@ -39,7 +64,8 @@ class BasicDataDisplay(Tk.LabelFrame): #Class That dispalys n number of labels
 		
 class AdvancedDataDisplay(Tk.Toplevel):
 
-	Fields = ['MJD','PLATE','FIBERID','CLASS','SUBCLASS','Z','Z_ERR','SN_MEDIAN_ALL']
+	Fields = INFO_FIELDS
+	#Fields = ['MJD','PLATE','FIBERID','CLASS','SUBCLASS','Z','Z_ERR','SN_MEDIAN_ALL']
 
 	def __init__(self, title, Data):
 	
@@ -174,15 +200,14 @@ class FullDataTable(Tk.Frame):
 	def __init__(self, master, Data):
 
 		Tk.Frame.__init__(self, master)
-		self.Headers = Data[0].dtype.names
 		self.window = Tk.PanedWindow(self)
 		self.window.pack(expand = 1, fill = Tk.BOTH)
 		self.lists = Tk.Listbox(self.window, width = 92)
-		self.ColumnLengths = {'RA':14,'DEC':14,'MJD':6,'PLATEID':5,'FIBERID':5,'REDSHIFT':14,'GroupID':6,'Interesting':18}
+		self.ColumnLengths = {'RA':14,'DEC':14,'REDSHIFT':14}
 
 		print "Populating List"
 
-		self.ListEntries = (self.BuildListEntries(i) for i in Data)
+		self.ListEntries = (self.BuildListEntries(Data[i]) for i in Data.currentData)
 
 		print "Showing Lists"
 		
@@ -192,32 +217,29 @@ class FullDataTable(Tk.Frame):
 	def BuildListEntries(self, Row):
 
 
-		return "|".join(((('{:<%s}' % self.ColumnLengths[i]).format(str(Row[i]))) for i in self.Headers if i != 'FILENAME'))
+		return "|".join(((('{:<%s}' % self.ColumnLengths[i]).format(str(Row[i]))) for i in self.ColumnLengths.keys()))
 
 	def populateList(self):
 
-		try:
-			self.lists.insert(Tk.END, self.ListEntries.next())
-			self.after(1 ,self.populateList)
-	
-		except StopIteration:
+		for i in self.ListEntries:
 
-			pass
+			self.lists.insert(Tk.END, i)
 
-class Window(Tk.Frame): #Example of a window application inside a frame
 
-        def __init__(self, master):
+#class Window(Tk.Frame): #Example of a window application inside a frame
 
-                Tk.Frame.__init__(self, master)
+#        def __init__(self, master):
+
+#                Tk.Frame.__init__(self, master)
                 #########################################
 
-		self.DataTable = FullDataTable(self, data)
-		self.DataTable.pack(expand = 1, fill = Tk.BOTH, side = Tk.RIGHT)
+#		self.DataTable = FullDataTable(self, DataClasses.Data())
+#		self.DataTable.pack(expand = 1, fill = Tk.BOTH, side = Tk.RIGHT)
 
-		self.Props = BasicDataDisplay(self, 9)
-		self.Props.setTitles(['Spam:','Eggs:','Foo:','Bar:'], 7)
-		self.Props.setData([20.453235,1.345274,0.55212,5524], 10)
-		self.Props.pack(expand = 0, fill = Tk.BOTH, side = Tk.LEFT)
+#		self.Props = BasicDataDisplay(self, 9)
+#		self.Props.setTitles(['Spam:','Eggs:','Foo:','Bar:'], 7)
+#		self.Props.setData([20.453235,1.345274,0.55212,5524], 10)
+#		self.Props.pack(expand = 0, fill = Tk.BOTH, side = Tk.LEFT)
 
 
 '''
@@ -240,12 +262,10 @@ class App(Tk.Tk):
 	def COM(self):
 	
 		Titles = ['RA:', 'DEC:', 'Redshift:', 'Group ID:']
-		Data = [data[self.c][i] for i in ('RA','DEC','REDSHIFT','GroupID')]
-	
 		self.MainWindow.Props.setTitles(Titles, 10)
-		self.MainWindow.Props.setData(Data,12) 
 		self.c += 1
 
 app = App()
 app.mainloop()
 '''
+

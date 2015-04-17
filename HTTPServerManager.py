@@ -1,6 +1,5 @@
 #This code contains a class that is meant to mimic the ftplib.FTP class, but for URLs 
 
-
 import urllib
 import re
 
@@ -16,7 +15,7 @@ class URL:
 
 		if path.rfind('.') != -1 and path != '..':
 
-			flurp
+			raise IOError("Not a Directory")
 
 		elif self.address.rfind('.') < len(self.address) - 7 and path != '..':
 		
@@ -33,9 +32,8 @@ class URL:
 			self.address = self.address[0:self.address.rfind('/')]
 
 		else:
-
-			flurp
-
+		
+			raise IOError("Not a Directory")
 
 		html = urllib.urlopen(self.address)
 
