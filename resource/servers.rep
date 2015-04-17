@@ -2,24 +2,33 @@
 //
 // Format as Follows:
 //
-//@ Type
-//# Server Name
-//# [USER]
-//# [PASS]
+//Name (Personal Preference)
+//Type (FTP or URL)
+//Server Name (Domain)
+//[USER]
+//[PASS]
+//
+//Separate Lines by a single space
 
-@ FTP
-# sdssrm.obs.carnegiescience.edu
-# sdssrm
-# rev-map
+Rev-Map
+FTP
+sdssrm.obs.carnegiescience.edu
+sdssrm
+rev-map
 
-@ URL
-# http://das.sdss.org/spectro/
+DR7
+URL
+http://das.sdss.org/spectro/
 
-@ URL
-# http://data.sdss3.org/sas/dr10/boss/spectro/redux/v5_5_12/spectra/
+DR10
+URL
+http://data.sdss3.org/sas/dr10/boss/spectro/redux/v5_5_12/spectra/
 
-@ URL
-# http://dr12.sdss3.org/sas/dr12/boss/spectro/redux/v5_7_2/spectra/
+DR12_BOSS
+URL
+http://dr12.sdss3.org/sas/dr12/boss/spectro/redux/v5_7_2/spectra/
 
-@ URL
-# http://mirror.sdss3.org/sas/dr12/sdss/spectro/redux/26/spectra/
+DR12_SDSS
+URL
+http://mirror.sdss3.org/sas/dr12/sdss/spectro/redux/26/spectra/
+
