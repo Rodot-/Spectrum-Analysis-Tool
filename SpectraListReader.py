@@ -1,53 +1,17 @@
 '''
 This Program can read in a table of MJD,PLATE,FIBER values and look for the appropriate spectra file
 '''
-from FileManager import *
+from FileManager import LoadServers
 import sys
-import urllib2
+from Config import PATH
 import eventlet
+from eventlet.green import urllib2
 import os
 import math
 
-Gpool = eventlet.GreenPool(size = 8)
-FileName = sys.argv[1]
-LocationList = open(FileName,'rb')
-URLlist = []
+def GetDirectory(MJD, PLATE, FIBER):
 
-def GetDR7Directory(MJD,PLATE,FIBER):
-
-	server = S[1][1]
-	PLATEZeros = ''
-	FIBERZeros = ''
-	for i in range(3 - int(math.log(int(PLATE),10))):
-		PLATEZeros += '0'
-	for i in range(2 - int(math.log(int(FIBER),10))):
-		FIBERZeros += '0'
-	if int(PLATE) == 1000:
-		PLATEZeros = ''
-	
-	FileName = 'spSpec-' + MJD + '-' + PLATEZeros + PLATE + '-' +  FIBERZeros + FIBER + '.fit'
-	DirectoryName = server + '1d_26/' + PLATEZeros + PLATE + '/1d/' + FileName
-	return [DirectoryName, FileName]
-
-
-def GetDR10Directory(MJD,PLATE,FIBER):
-
-	server = S[2][1]
-	Zeros = ''
-
-	for i in range(3 - int(math.log(int(FIBER),10))):
-		Zeros += '0'
-	if int(FIBER) == 1000:
-		Zeros = ''
-
-
-	FileName = 'spec-' + PLATE + '-' + MJD + '-' + Zeros + FIBER + ".fits"
-	DirectoryName = server + '/' + PLATE + '/' + FileName
-	return [DirectoryName, FileName]
-
-def GetDR12Directory(MJD, PLATE, FIBER):
-
-	server = S[4][1]
+	server = S['DR12_SDSS'][1]
 	Zeros = ''
 	ZerosP = ''
 
@@ -61,63 +25,45 @@ def GetDR12Directory(MJD, PLATE, FIBER):
 	if int(PLATE) == 1000:
 		ZerosP = ''
 
-
-
 	FileName = "".join(('spec-' , ZerosP, PLATE , '-' , MJD , '-' , Zeros , FIBER , ".fits"))
 	DirectoryName = "".join((server , ZerosP, PLATE , '/' , FileName))
 	return [DirectoryName, FileName]
 
-for line in LocationList:
-
-	PLATE = line[0:line.find(',')]
-	MJD = line[line.find(',')+1: line.find(',',line.find(',')+1)]
-	FIBER = line[line.rfind(',')+1:len(line)-1]
-
-	#if int(MJD) < 55000:
-
-	#	Info = GetDR7Directory(MJD,PLATE,FIBER)
-
-	#elif int(MJD) < 56700:
-
-	#	Info = GetDR10Directory(MJD,PLATE,FIBER)	
-
-	#else:
-	
-	#	Info = GetDR12Directory(MJD, PLATE, FIBER)
-	Info = GetDR12Directory(MJD, PLATE, FIBER)
-
-	Name = Info[1]
-	Directory = Info[0]
-
-	
-	#if Name.find('.fit') != -1 and not os.path.isfile("downloads/SDSS/" + Name):
-
-	URLlist.append(Directory)
-
-#print eventlet.green.urllib2.urlopen(URLlist[0]).read()
 def fetch(url):
 	try:
 		body = eventlet.green.urllib2.urlopen(url).read()
-		a = open("downloads/SDSS/" + url[url.rfind('/')+1:], 'wb')
-		a.write(body)
-		a.close()
-		#try:
-		#	print "Updating"
-		#	ChangeSDSS("downloads/SDSS/"+url[url.rfind('/')+1:])
-		#except:
-		#	os.system("rm downloads/SDSS/" + url[url.rfind('/')+1:])
-		#	print "Can't Use That One"
+		with open("downloads/" + url[url.rfind('/')+1:], 'wb') as a:
+			a.write(body)
 		return url[url.rfind('/')+1:]
-	except:
-	
+
+	except urllib2.HTTPError:	
 		print "Bad URL:"
 		return url
 
+if __name__ == '__main__':
+
+	Gpool = eventlet.GreenPool(size = 100)
+	FileName = sys.argv[1]
+	LocationList = open(FileName,'rb')
+	URLlist = []
+	S = LoadServers()
+
+	for line in LocationList:
+
+		MJD,PLATE,FIBER = line[:-1].split(',')
+
+		Info = GetDirectory(MJD, PLATE, FIBER)
+
+		Name = Info[1]
+		Directory = Info[0]
+
+		URLlist.append(Directory)
+
 	
-for i in Gpool.imap(fetch, URLlist):
-	print i
+	for i in Gpool.imap(fetch, URLlist):
+		print i
 
-
+	LocationList.close()
 
 	
 
