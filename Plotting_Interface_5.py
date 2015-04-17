@@ -357,6 +357,7 @@ class App(Tk.Tk):
 	def browseServer(self):
 
 		window = Tk.Toplevel(self)
+		window.title("Spectrum Search")
 		browser = DataTables.ServerBrowser(window)
 		browser.pack(expand = 1, fill = Tk.BOTH)
 

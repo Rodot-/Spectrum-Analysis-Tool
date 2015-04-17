@@ -33,9 +33,14 @@ class ServerBrowser(Tk.Frame):
 	def select(self):
 
 		selection = self.server_listbox.get(self.server_listbox.curselection())
-		browser = Browser.Browser(self.master, self.server_list[selection])
-		browser.pack()	
+		msg = Tk.Label(self, text = "".join(("Loading ",selection)))
+		msg.pack(expand = 1, fill = Tk.BOTH)
 		self.server_listbox.pack_forget()
+		self.selectButton.pack_forget()
+		self.update()
+		browser = Browser.Browser(self, self.server_list[selection])
+		msg.pack_forget()
+		browser.pack(expand = 1, fill = Tk.BOTH)
 
 class BasicDataDisplay(Tk.LabelFrame): #Class That dispalys n number of labels
 
