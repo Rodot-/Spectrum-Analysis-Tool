@@ -10,15 +10,15 @@ Requires eventlet concurrent processing library.
 
 To Run Software: 
 
-	Place spec-PLATE-MJD-FIBER files into 'downloads/SDSS', or run Browser.py and downloads files of Interest, or run SpectraListReader (more documentation later).
+	Place spec-PLATE-MJD-FIBER files into 'downloads/SDSS', or run Browser.py and downloads files of Interest, or run SpectraListReader (more documentation later).  Program contains sample files so this step is not necessary.
 
-	Run Browser.py
+	run "python Plotting_Interface_5.py"
+	
+	If asked to build matches.rep, type 'y'
+	
 
-	Click "Run Matching"
-
-	Wait for Matching to complete
-
-	run "Plotting_Interface_5.py"
+	
+	
 
 
 
