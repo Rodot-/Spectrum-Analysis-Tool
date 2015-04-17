@@ -10,3 +10,4 @@ with open('resource/SAT.conf', 'rb') as Config:
 
 PATH = options['PATH']
 MIN_GROUP_SIZE = int(options['MIN_GROUP_SIZE'])
+INFO_FIELDS = options['INFO_FIELDS'].split(',')
