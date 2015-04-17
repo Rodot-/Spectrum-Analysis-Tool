@@ -433,6 +433,7 @@ class App(Tk.Tk):
 
 		self.MainWindow.saveData()
 		self.after_idle(self.quit)
+		self.after_idle(self.destroy)
 
 app = App()
 app.mainloop()
