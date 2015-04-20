@@ -11,6 +11,11 @@ import DataTables
 import Science
 import tkFont
 
+try:
+	import thread
+except ImportError:
+	import dummy_thread
+
 if sys.version_info[0] < 3:
         import Tkinter as Tk
 else:
@@ -194,13 +199,16 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 	def backgroundTasks(self, n = 0):
 
-		if n < len(self.data.currentData) and n < self.data.DataPosition + 30:
-			for i in self.data[self.data.FullData[n]].getMembers(): i.getSpectrum()
-			self.after(5000,self.backgroundTasks, n+1)
+		if n < len(self.data.currentData) and n < self.data.DataPosition + 32:
+			for i in self.data[self.data.FullData[n]].getMembers(): 
+
+				thread.start_new_thread(i.getSpectrum,())
+			self.after(1000,self.backgroundTasks, n+1)
 		else:
 
+			print "Idle"
 			self.after(60000, self.backgroundTasks, self.data.DataPosition+1)
-			self.saveData('Autosave.csv')
+			thread.start_new_thread(self.saveData,('Autosave.csv',))
 
 
 	def toggleMark(self, tag, button, var):

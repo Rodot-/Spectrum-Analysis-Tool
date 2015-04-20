@@ -23,6 +23,36 @@ def smooth_(Data, N):
 	##########################
 	return np.array([np.convolve(Data[0], np.ones((N,))/N, mode = 'same'), Data[1]])
 
+def normalize_int(Data, **kwargs):
+
+	result = []
+	for i in Data:
+		result.append([i[0]/sum(i[0]), i[1]])
+	return result
+
+def normalize_wave(Data, wavelength = 6564.61):
+
+	result = []
+	for i in Data:
+        	Diff = np.absolute(i[1] - wavelength)
+       		separation = min(Diff)
+        	scale = 1.0/(i[0][np.where(Diff == separation)[0][0]])
+        	result.append([i[0]*scale,i[1]])
+	return result
+
+def normalize_(Data, version = normalize_int, **kwargs):
+
+	return version(Data, **kwargs)
+
+
+def normalize(f):
+
+	def wrap(*args, **kwargs):
+
+		return normalize_(f(*args, **kwargs))
+
+	return wrap
+
 def FootPrint_(Data):
 
 	if len(Data) != 2:
@@ -101,16 +131,6 @@ def smooth(Data, N = 10): #Vectorization of the smooth_ function.  Allows input 
 	
 	print "Smoothing Time: ", time.time() - T0
 
-	return result
-
-def normalize(Data, wavelength):
-
-	result = []
-	for i in Data:
-        	Diff = np.absolute(i[1] - wavelength)
-       		separation = min(Diff)
-        	scale = 1.0/(i[0][np.where(Diff == separation)[0][0]])
-        	result.append([i[0]*scale,i[1]])
 	return result
 
 '''
