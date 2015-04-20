@@ -203,7 +203,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 			for i in self.data[self.data.FullData[n]].getMembers(): 
 
 				thread.start_new_thread(i.getSpectrum,())
-			self.after(1000,self.backgroundTasks, n+1)
+			self.after(5000,self.backgroundTasks, n+1)
 		else:
 
 			print "Idle"
