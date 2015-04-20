@@ -440,6 +440,9 @@ class Data(object):
 
 		else: return self.groupList[index]
 
+	def __iter__(self):
+
+		return (self[i] for i in self.currentData)
 
 	def __call__(self):
 
