@@ -1,5 +1,5 @@
 import numpy as np
-from DataManager import getMatchesArray
+from DataManager import getMatchesArray, groupData
 from Config import PATH, MIN_GROUP_SIZE
 from astropy.io import fits
 import time
@@ -9,161 +9,6 @@ import sys
 
 #Global Variables:
 
-#PATH = "downloads/SDSS"
-#PATH = '/media/rodot/257ed97b-65be-4cbe-85ff-39d657a241c1/home/rodot/SpectraFiles'
-
-
-class List(object):
-
-	def __init__(self, head=None):
-
-		self._head = head
-		self._end = self._head
-		self._size = 0
-
-	def pop(self, obj):
-
-		if self._head == None: return
-
-		elif obj == self._head.data():
-
-			self._head = self._head.link()
-			self._size -= 1
-
-		elif obj == self._end.data():
-
-			self.pop_back()
-
-		else:
-
-			ptr = self._head
-			while ptr.link().data() != obj and ptr.link() != self._end:
-				ptr = ptr.link()
-				print ptr.link()
-
-			if ptr.link() == self._end:
-				print "No Objects Found"
-				return
-
-			ptr.setlink(ptr.link().link())	
-
-			self._size -= 1
-
-	def pop_back(self):
-
-		if self._head == None: return
-
-		elif self._head.link() == None:
-
-			self._head = None
-			self._end = self._head
-
-		else:
-			
-			ptr = self._head
-			while ptr.link() != self._end:
-				ptr = ptr.link()
-			self._end = ptr
-			self._end.setlink(None)
-
-		self._size -= 1
-
-	def push_back(self, obj):
-
-		if self._head == None:
-	
-			self._head = Node(obj)
-			self._end = self._head
-
-		else:
-
-			ptr = self._end
-			self._end = Node(obj)
-			ptr.setlink(self._end)
-
-		self._size += 1
-
-	def insert(self, obj, pos):
-
-		if pos >= self._size:
-
-			print "Index Out of Range"
-			return None
-
-		elif pos == 0:
-
-			ptr = self._head
-			self._head = Node(obj)
-			self._head.setlink(ptr)
-			self._size += 1
-
-		elif pos == self._size - 1:
-
-			self.push_back(obj)
-
-		else:
-
-			ptr = self._head
-
-			for i in xrange(self._size-1):
-
-				ptr = ptr.link()
-
-			objptr = Node(obj)
-			objptr.setlink(ptr.link())
-			ptr.setlink(objptr)
-		
-			self._size += 1				
-		
-	def __getitem__(self, index):
-
-		ptr = self._head
-
-		for i in xrange(index): ptr = ptr.link()
-
-		return ptr.data()
-
-	def __call__(self):
-
-		if self._head == None:return
-
-		ptr = self._head
-
-		for i in xrange(self.size()):
-
-			yield ptr.data()
-			ptr = ptr.link()	
-
-	def size(self):
-
-		return self._size
-
-	def sort(self):
-
-		print "Sorting Not Currently Supported"
-
-class Node(object):
-
-	def __init__(self, data):
-
-		self._data = data
-		self._link = None
-
-	def setlink(self, node):
-
-		self._link = node
-
-	def setdata(self, data):
-
-		self._data = data
-
-	def link(self):
-
-		return self._link
-
-	def data(self):
-
-		return self._data
 
 class Label(object):
 
@@ -171,31 +16,35 @@ class Label(object):
 	def __init__(self, ID):
 
 		self.ID = ID
-		self.members = List()
+		self.members = []
 
 	def size(self):
 
-		return self.members.size()
+		return len(self.members)
 
 	def __len__(self):
 
-		return self.size()
+		return len(self.members)
 
 	def getMembers(self):
 
-		return self.members()
+		return (i for i in self.members)
 
 	def addMember(self, obj):
 
-		self.members.push_back(obj)
+		self.members.append(obj)
 
 	def removeMember(self, obj):
 
-		self.members.pop(obj)
+		self.members.remove(obj)
 
 	def __getitem__(self, index):
 
-		return self.members[index]
+		return list(self.members)[index]
+
+	def reduced(self):
+
+		self.members = list(set(self.members))
 
 class Group(Label):
 
@@ -215,7 +64,7 @@ class Group(Label):
 
 	def addTag(self, tag):
 
-		if tag not in self.getTags(): self.tags.addMember(tag)
+		self.tags.addMember(tag)
 
 	def removeTag(self, tag):
 
@@ -317,59 +166,47 @@ class Data(object):
 
 	def __init__(self):
 
-		print "Mapping To Spectrum"
-		spectra = map(Spectrum, getMatchesArray())
-		print "Done Mapping To Spectrum"
-	
-		self.groupList = dict(zip([i for i in xrange(spectra[-1].Data['GroupID']+1)],[Group(i) for i in xrange(spectra[-1].Data['GroupID']+1)]))
-
-		self.tagList = dict(zip(['None'],[Tag("None", 0)]))
-
-		self.currentData = np.array(self.groupList.keys())
+		#State Variables
 
 		self.tagState = [("None",'u')]
 
-		self.DataPosition = 0
-
 		self.MIN_GROUP_SIZE = MIN_GROUP_SIZE
 
-		TAGNAMES = self.tagList.viewkeys()
+		T0 = time.clock()
+		print "Setting Up"
+		self.groupList = dict() #dict of groups
+		self.tagList = dict() #dict of tags
+		#Setting Up groups and Tags
+		for spectrum in getMatchesArray(): #Go through loaded Objects
+			ID = spectrum['GroupID']
+			if not ID % 128: #Loading Info
+				print "                        \r",
+				print "Loading Object", ID,
+			currentGroup = self.groupList.setdefault(ID, Group(ID))
+			currentGroup.addMember(Spectrum(spectrum))
+			for tag in spectrum['TAGS'].split(): #Adding Tags
+				if tag != "None":
+					newTag = self.tagList.setdefault(tag, Tag(tag, 0))
+					newTag.addMember(self.groupList[ID])
+					currentGroup.addTag(newTag)
+		self.currentData = np.array(self.groupList.keys())
+		print "\rMatching Time:", time.clock() - T0
 
-		for i in xrange(len(spectra)):
-
-			ID = spectra[i].Data['GroupID']
-			Tags = set(spectra[i].Data['TAGS'].split())
-			self.groupList[ID].addMember(spectra[i])
-
-			for j in Tags:
-
-				#if j not in TAGNAMES:
-
-				#	newTag = Tag(j, len(self.tagList))
-				#	self.tagList.setdefault(j,newTag)
-	
-				newTag = self.tagList.setdefault(j, Tag(j, len(self.tagList)))
-
-				#else:
-
-				#	newTag = self.tagList[j]
-
-				self.groupList[ID].addTag(newTag)
-				if j!= "None":
-					if self.groupList[ID] not in newTag.getMembers():
-						newTag.addMember(self.groupList[ID])
-				#else:
-					#newTag.addMember(self.groupList[ID])#TODO:BROKEN
-		print "Getting Best Data For Each Group"
-		for i in xrange(len(self.groupList)): self.groupList[i].bestData()
+		#Removing Duplicate Entries
+		for i in self.groupList.values(): 
+			i.tags.reduced()
+			i.bestData()
+		for i in self.tagList.values():
+			i.reduced()
+		
+		#Sort the Data by Redshift
 		self.sort()
+		#Full data used for referencing everything contained in the Object.  Slightly more specific to user contraints
 		self.FullData = np.array([i for i in self.currentData if self.groupList[i].size() >= self.MIN_GROUP_SIZE])
-		self.update()
 		self.DataPosition = 0
+		self.update()
 
 	def update(self): #Update the data after change to Tagstate
-
-		print self.tagState
 
 		if self.size() != 0:
 
