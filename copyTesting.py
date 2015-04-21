@@ -131,8 +131,8 @@ class Spectrum(object):
 	def __init__(self, Data):
 
 		self.Data = Data
-		self.Flux = []
-		self.Lambda = []
+		self.Flux = None
+		self.Lambda = None
 
 	def __getitem__(self, index):
 
@@ -150,9 +150,7 @@ class Spectrum(object):
 
 	def loadSpectrum(self):
 
-		f,l = (len(self.Flux),len(self.Lambda))
-
-		if 0 == f or f != l or l == 0:
+		if self.Flux == None or self.Lambda == None:
 			Data = fits.open("/".join((PATH,str(self['FILENAME']))))
 			self.Flux = Data[1].data['flux']
 			self.Lambda = np.power(10,Data[1].data['loglam'])
@@ -176,6 +174,7 @@ class Data(object):
 		print "Setting Up"
 		self.groupList = dict() #dict of groups
 		self.tagList = dict() #dict of tags
+		TAGNAMES = self.tagList.viewkeys()
 		#Setting Up groups and Tags
 		for spectrum in getMatchesArray(): #Go through loaded Objects
 			ID = spectrum['GroupID']
