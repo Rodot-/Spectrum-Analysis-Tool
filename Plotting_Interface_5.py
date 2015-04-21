@@ -362,7 +362,9 @@ class App(Tk.Tk):
 		self.tools.add_command(label="Download", command = self.browseServer)
 		self.tools.add_command(label="Override Redshift", command = self.changeZ)
 		self.tools.add_command(label="Transform Data", command = self.mangle)
-
+	
+		self.tools.add_command(label="Run Matching", command = self.runMatching)
+		self.tools.add_command(label="Reload Data", command = self.reloadData)
 		self.menubar.add_cascade(label = "View", menu = self.views)
 		self.menubar.add_cascade(label = "New", menu = self.new)
 		self.menubar.add_cascade(label = "Tools", menu = self.tools)
@@ -370,6 +372,26 @@ class App(Tk.Tk):
 		self.config(menu = self.menubar)
 		msgBox.withdraw()
 		self.deiconify()
+
+	def reloadData(self):
+
+		msgBox = Tk.Toplevel()
+		msg = Tk.Label(msgBox, text = "Reloading Data...\n\nThis Will Take a Few Seconds.")
+		msg.pack()
+		msgBox.update()
+		self.MainWindow.data = DataClasses.Data()
+		self.MainWindow.data.DataPosition = 0
+		self.MainWindow.UpdatePlots()
+		msg['text'] = "Done Loading"
+		msgBox.update()
+
+	def runMatching(self):
+
+		msgBox = Tk.Toplevel()
+		msg = Tk.Label(msgBox, text = "Matching Data in Background\n\nRestart or Reload Required\n\nFor Changes To Take Effect")
+		msg.pack()
+		thread.start_new_thread(DataClasses.groupData,())
+		msgBox.update()
 
 	def mangle(self):
 
