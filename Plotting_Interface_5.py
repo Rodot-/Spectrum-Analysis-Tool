@@ -386,10 +386,13 @@ class App(Tk.Tk):
 		window.title("Change Redshift")
 		frame = DataTables.OverrideData(window, self.MainWindow.data)
 		frame.pack()
-		self.wait_window(frame.entry)
-		self.MainWindow.data.update()
-		self.MainWindow.updateFields()
-		
+		try:
+			self.wait_window(frame.entry)
+			self.MainWindow.data.update()
+			self.MainWindow.updateFields()
+		except Tk.TclError:
+			print "Weird Bug Encountered"		
+
 
 	def browseServer(self):
 
@@ -479,6 +482,7 @@ class App(Tk.Tk):
 	def Quit(self):
 
 		self.MainWindow.saveData()
+		self.update_idletasks()
 		self.after_idle(self.quit)
 		self.after_idle(self.destroy)
 
