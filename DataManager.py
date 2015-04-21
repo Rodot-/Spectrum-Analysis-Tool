@@ -173,9 +173,6 @@ def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAt
 
 	try:
 
-		#InterestingFile = np.loadtxt(InterestingFile,delimiter = ', ',usecols = (0,1,2,8), dtype={'names':['MJD','PLATEID','FIBERID', 'TAGS'], 'formats': ["<S64","<S64","<S64","<S128"]})
-
-		#InterestingFlag = np.core.defchararray.add(np.core.defchararray.add(InterestingFile['MJD'], InterestingFile['PLATEID']), InterestingFile['FIBERID'])
 		InterestingFlag = np.loadtxt(InterestingFile,delimiter = ', ',usecols = (6,8), dtype={'names':['FILENAME', 'TAGS'], 'formats': ["<S64","<S128"]})
 
 	except:
@@ -185,28 +182,12 @@ def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAt
 	matchList = np.loadtxt("Matches.rep", delimiter=', ', dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting", "TAGS"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64","<S256"]})
 
 	print "Text File Loaded"
+	print "Number of Interesting Files: ", len(InterestingFlag)
+	print "Total Number of Files: ", len(matchList)
 
-	#IDlist = np.core.defchararray.add(np.core.defchararray.add(matchList['MJD'].astype('<S64'), matchList['PLATEID'].astype('<S64')), matchList['FIBERID'].astype('<S64'))
 	IDlist = dict(zip(matchList['FILENAME'], matchList))
 	for i in InterestingFlag:
 		IDlist[i['FILENAME']]['TAGS'] = i['TAGS']
-		IDlist[i['FILENAME']]['Interesting'] = 'Interesting'	
-
-	#indecies = np.in1d(IDlist, InterestingFlag, assume_unique = True)
-	#for i in np.where(indecies)[0]:
-
-	#	for j in xrange(len(InterestingFlag)):
-
-	#		if IDlist[i] == InterestingFlag[j]:
-
-	#			matchList['TAGS'][i] = InterestingFile['TAGS'][j]
-	#			matchList['Interesting'][i] = 'Interesting'
-
-
-
-	print "Number of Interesting Files: ", len(InterestingFlag)
-
-	print "Total Number of Files: ", len(matchList)
 
 	return matchList
 
