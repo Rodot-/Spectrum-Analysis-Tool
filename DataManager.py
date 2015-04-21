@@ -177,7 +177,10 @@ def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAt
 
 	except:
 
-		InterestingFlag = []
+		try:
+			return getMatchesArray('Autosave.csv')
+		except:
+			InterestingFlag = []
 
 	matchList = np.loadtxt("Matches.rep", delimiter=', ', dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting", "TAGS"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64","<S256"]})
 
@@ -188,6 +191,7 @@ def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAt
 	IDlist = dict(zip(matchList['FILENAME'], matchList))
 	for i in InterestingFlag:
 		IDlist[i['FILENAME']]['TAGS'] = i['TAGS']
+		IDlist[i['FILENAME']]['Interesting'] = 'Interesting'		
 
 	return matchList
 

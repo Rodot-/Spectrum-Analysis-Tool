@@ -128,8 +128,8 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		self.Transform.append(Transformations.reflexive)
 		self.Transform.append(Transformations.reflexive)
 
-		self.NEXT()
-	
+		self.UpdatePlots()		
+
 		self.ToggleSlineMark.repack()
 		self.ToggleSlineView.repack(self.ToggleSlineMark.data)
 		#Cursor
