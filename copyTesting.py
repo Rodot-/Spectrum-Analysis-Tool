@@ -131,8 +131,8 @@ class Spectrum(object):
 	def __init__(self, Data):
 
 		self.Data = Data
-		self.Flux = None
-		self.Lambda = None
+		self.Flux = []
+		self.Lambda = []
 
 	def __getitem__(self, index):
 
@@ -150,7 +150,7 @@ class Spectrum(object):
 
 	def loadSpectrum(self):
 
-		if self.Flux == None or self.Lambda == None:
+		if len(self.Flux) == 0 or len(self.Lambda) == 0:
 			Data = fits.open("/".join((PATH,str(self['FILENAME']))))
 			self.Flux = Data[1].data['flux']
 			self.Lambda = np.power(10,Data[1].data['loglam'])
