@@ -5,11 +5,157 @@ import Browser
 from Config import PATH, INFO_FIELDS
 import copyTesting as DataClasses
 from astropy.io import fits
+import Transformations
 
 if sys.version_info[0] < 3:
         import Tkinter as Tk
 else:
         import tkinter as Tk
+
+class AutoEntry(Tk.Entry):
+
+	def __init__(self, master, default_text, dtype):
+
+		Tk.Entry.__init__(self, master)
+		self.dtype = dtype
+		self.default_text = default_text
+		self.bind('<Button-1>', lambda event: self.stopReplacing())
+		self.replaceText()
+
+	def replaceText(self):
+
+		if self.get() == "" and not self.selection_present(): self.insert(0, self.default_text)
+
+	def stopReplacing(self):
+
+		if self.get() == self.default_text:
+			self.delete(0,Tk.END)
+
+	def getSelection(self):
+
+		value = self.get()
+		try:
+			result = self.dtype(value)
+			return result
+
+		except ValueError:
+
+			ErrorMsg = Tk.Toplevel()
+			label = Tk.Label(ErrorMsg, text = "Invalid Value")
+			label.pack()
+
+class DataMangler(Tk.Toplevel):
+
+	def __init__(self, master):
+
+		Tk.Toplevel.__init__(self)
+		self.title("Data Mangler")
+		self.master = master
+		self.smoothing = SmoothingManager(self)
+		self.transforming = TransformationManager(self)
+		#self.normalizing = Tk.LabelFrame(self, text = "Normalizing")
+		#self.transforming = Tk.LabelFrame(self, text = "Transformations")
+		self.smoothing.pack(side = Tk.RIGHT, expand = 1, fill = Tk.BOTH)
+		self.transforming.pack(side = Tk.LEFT, expand = 1, fill = Tk.BOTH)
+
+	def smoothReturn(self, version, params):
+
+		self.master.MainWindow.smoothing = version
+		self.master.MainWindow.smoothingargs = params
+
+		self.master.MainWindow.UpdatePlots()
+	
+	def transformReturn(self, version):
+
+		self.master.MainWindow.Transform[1] = version
+		self.master.MainWindow.UpdatePlots()
+
+class TransformationManager(Tk.LabelFrame):
+
+	def __init__(self, master):
+
+		Tk.LabelFrame.__init__(self, master)
+		self['text'] = "Transformations"
+		self.master = master
+		self.types = {1:Transformations.divide,2:Transformations.subtract,3:Transformations.reflexive}
+		self.selection = Tk.IntVar()
+		self.divide = Tk.Radiobutton(self, text = "Divide", variable = self.selection, value = 1, command = self.accept, justify = Tk.LEFT, anchor = Tk.W)
+		self.subtract = Tk.Radiobutton(self, text = "Subtract", variable = self.selection, value = 2, command = self.accept, justify = Tk.LEFT, anchor = Tk.W)
+		self.none = Tk.Radiobutton(self, text = "None", variable = self.selection, value = 3, command = self.accept, justify = Tk.LEFT, anchor = Tk.W)
+
+		self.divide.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
+		self.subtract.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
+		self.none.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
+		self.none.select()
+
+	def accept(self):
+
+		self.master.transformReturn(self.types[self.selection.get()])
+
+		
+
+
+class SmoothingManager(Tk.LabelFrame):
+
+	def __init__(self, master):
+
+		Tk.LabelFrame.__init__(self, master)
+		self.master = master
+		self['text'] = "Smoothing"
+		self.types = {1:Transformations.smooth_,2:Transformations.smoothSavgol}
+		self.param = {1:{'N':10},2:{'N':11,'order':2}}		
+		self.type_selection = Tk.LabelFrame(self, text = 'Method')
+		###################################
+		self.selection = Tk.IntVar()
+		self.Savgol = Tk.Radiobutton(self.type_selection, text = "Savitzky-Golay", variable = self.selection, value = 2, command = self.savgolSetup)
+		self.boxcar = Tk.Radiobutton(self.type_selection, text = "Box Car", variable = self.selection, value = 1, command = self.boxcarSetup)	
+		###################################
+		self.params = Tk.Frame(self)
+		###################################
+		self.length = AutoEntry(self.params, 'Length (odd int)', self.oddInt) 	
+		self.order = AutoEntry(self.params, 'Order (int)', int)
+		###################################
+		self.acceptButton = Tk.Button(self, text = 'Accept', command = self.accept)
+		self.boxcar.pack(side = Tk.LEFT, expand = 0, fill = Tk.X)
+		self.Savgol.pack(side = Tk.RIGHT, expand = 0, fill = Tk.X)
+		self.length.pack(side = Tk.LEFT, expand = 1, fill = Tk.X)
+		self.acceptButton.pack(side = Tk.BOTTOM, expand = 0, fill = Tk.X)
+		self.type_selection.pack(side = Tk.TOP, expand = 1, fill = Tk.X)
+		self.params.pack(side = Tk.TOP, expand = 1, fill = Tk.X)
+		self.order.pack(side = Tk.RIGHT, expand = 1, fill = Tk.X)
+		self.order['state'] = Tk.DISABLED
+		self.boxcar.select()
+
+	def oddInt(self, x):
+
+		x = int(x)
+		if not x % 2:
+			x += 1
+		return x 
+
+	def accept(self):
+
+		var = self.selection.get()
+		N = self.length.getSelection()
+		if N:
+			self.param[var]['N'] = self.length.getSelection()
+			if var == 2:
+				order = self.order.getSelection()
+				if order:
+					self.param[var]['order'] = self.order.getSelection()
+					self.master.smoothReturn(self.types[var], self.param[var])
+			else: self.master.smoothReturn(self.types[var], self.param[var])
+	
+	def savgolSetup(self):
+
+		self.order['state'] = Tk.NORMAL
+		self.order.replaceText()
+		self.length.replaceText()
+
+	def boxcarSetup(self):	
+
+		self.order['state'] = Tk.DISABLED
+		self.length.replaceText()
 
 class ServerBrowser(Tk.Frame):
 
@@ -41,6 +187,41 @@ class ServerBrowser(Tk.Frame):
 		browser = Browser.Browser(self, self.server_list[selection])
 		msg.pack_forget()
 		browser.pack(expand = 1, fill = Tk.BOTH)
+
+
+class OverrideData(Tk.LabelFrame):
+
+	def __init__(self, master, Data, field = 'REDSHIFT'):
+
+		Tk.LabelFrame.__init__(self, master)
+		self.master = master
+		self.group = Data()
+		self.field = field
+		old_value = self.group[field]
+		self.dtype = type(old_value)
+		if self.dtype is int:self.dtype = float
+		self.msgField = Tk.Label(self, text = " ".join(('Adjusting', field)))
+		self.msgValue = Tk.Label(self, text = " ".join(('Old Value:', str(old_value))))
+		self.entry = AutoEntry(self, str(self.dtype), self.dtype)
+		self.warn = Tk.Label(self, text = "Warning: Overrides will not be saved.")
+		self.go = Tk.Button(self, text = 'GO', command = self.adjustData) 
+		self.msgField.pack(side = Tk.TOP, expand = 0, fill = Tk.BOTH)
+		self.msgValue.pack(side = Tk.TOP, expand = 0, fill = Tk.BOTH)
+		self.entry.pack(side = Tk.TOP, expand = 0, fill = Tk.BOTH)
+		self.warn.pack(side = Tk.TOP, expand = 0, fill = Tk.BOTH)
+		self.go.pack(side = Tk.BOTTOM, expand = 0, fill = Tk.X)
+
+	def adjustData(self):
+
+		result = self.entry.getSelection()
+		if result:
+			self.group.Data[self.field] = result
+			for i in self.group.sortedReturn():
+				i.Data[self.field] = result
+			self.destroy()
+			self.master.withdraw()	
+
+
 
 class BasicDataDisplay(Tk.LabelFrame): #Class That dispalys n number of labels
 

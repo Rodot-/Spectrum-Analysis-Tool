@@ -1,6 +1,6 @@
 import numpy as np
 from DataManager import getMatchesArray
-from Config import PATH
+from Config import PATH, MIN_GROUP_SIZE
 from astropy.io import fits
 import time
 import sys
@@ -48,7 +48,6 @@ class List(object):
 			ptr.setlink(ptr.link().link())	
 
 			self._size -= 1
-
 
 	def pop_back(self):
 
@@ -296,17 +295,19 @@ class Spectrum(object):
 
 	def getSpectrum(self):
 
-		f = len(self.Flux)
-		l = len(self.Lambda)
-
-		if f != l or f == 0 or l == 0:
-
-			Data = fits.open("/".join((PATH, str(self['FILENAME']))))
-			self.Flux = Data[1].data['flux']
-			self.Lambda = 10**Data[1].data['loglam']
-			Data.close()
+		self.loadSpectrum()
 
 		return [self.Flux, self.Lambda]
+
+	def loadSpectrum(self):
+
+		f,l = (len(self.Flux),len(self.Lambda))
+
+		if 0 == f or f != l or l == 0:
+			Data = fits.open("/".join((PATH,str(self['FILENAME']))))
+			self.Flux = Data[1].data['flux']
+			self.Lambda = np.power(10,Data[1].data['loglam'])
+			Data.close()
 
 	def __repr__(self):
 
@@ -330,7 +331,7 @@ class Data(object):
 
 		self.DataPosition = 0
 
-		self.MIN_GROUP_SIZE = 1
+		self.MIN_GROUP_SIZE = MIN_GROUP_SIZE
 
 		TAGNAMES = self.tagList.viewkeys()
 

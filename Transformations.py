@@ -3,16 +3,34 @@ import numpy as np
 import time
 from scipy.signal import savgol_filter
 
-def smoothSavgol(Data, window_length = 11, order=2):
 
-	y = savgol_filter(Data[0], window_length, order)
+
+def frunning(function):
+
+	def wrapper(Data, *args, **kwargs):
+
+		result = []
+
+	        for i in xrange(len(Data)-1): result.append(function([Data[i],Data[i+1]], *args, **kwargs))
+
+	        return result
+	
+	return wrapper
+
+def reflexive(Data, *args):
+
+	return Data
+
+def smoothSavgol(Data, N = 11, order=2):
+
+	y = savgol_filter(Data[0], N, order)
 	for i in xrange(3):  #http://pubs.acs.org/doi/pdf/10.1021/ac50064a018
 		
-		y = savgol_filter(y, window_length, order)
+		y = savgol_filter(y, N, order)
 	
 	return np.array([y, Data[1]])
 
-def smooth_(Data, N):
+def smooth_(Data, N=10):
 
 	##########################
 	# Smooths Data By Boxcar #
@@ -72,33 +90,21 @@ def FootPrint_(Data):
 	
 		return fData
 
-def runningTransform(Data, Transform, N = 10):
-
-	result = []
-
-	for i in xrange(len(Data)-1): result.append(Transform([Data[i],Data[i+1]], N)[0])
-
-	return result
-
-def subtract(Data, N = 10):
+@frunning
+def subtract(Data):
 
 	T0 = time.time()
 
-	if len(Data) > 2:
-
-		return runningTransform(Data, subtract, N)
-
 	FP = FootPrint_(Data)
 
-	result = [np.array([np.subtract(FP[0][0], FP[1][0]), FP[0][1]])]
+	result = np.array([np.subtract(FP[0][0], FP[1][0]), FP[0][1]])
 
-	result = smooth(result, N)
-	
 	print "Subtraction Time: ", time.time() - T0
 
 	return result
 
-def divide(Data, N = 10):
+@frunning
+def divide(Data):
 
 	T0 = time.time()
 
@@ -114,33 +120,53 @@ def divide(Data, N = 10):
 
 	result[0][index] = 0
 
-	result = smooth([result], N)
-
 	print "Division Time: ", time.time() - T0
 
 	return result
 
-def smooth(Data, N = 10): #Vectorization of the smooth_ function.  Allows input of 3-D arrays
+def smooth(Data, method = smooth_, N = 0, **kwargs): #Vectorization of the smooth_ function.  Allows input of 3-D arrays
 	T0 = time.time()
 
 	if N == 0:
 
 		return [i for i in Data]
 	
-	result = [smooth_(i, N) for i in Data]
+	result = [method(i, **kwargs) for i in Data]
 	
 	print "Smoothing Time: ", time.time() - T0
 
 	return result
 
-'''
-x = np.arange(100)*1.0
-y = np.arange(100) * 2.0
-x1 = np.arange(103)*1.0
-y1 = np.arange(103)*2.0
 
-data = [[x,y],[x1, y1**2]]
+def fsmooth(function, method = smooth_, **smoothargs):
 
-print subtract_(data)
+	def wrapper(Data, **kwargs):
 
-'''
+		fresults = function(Data, **kwargs)
+
+		return [method(result, **smoothargs) for result in fresults]
+
+	return wrapper
+
+
+
+if __name__ == '__main__':
+
+
+	x = np.arange(100)*1.0
+	y = np.arange(100) * 2.0
+	x1 = np.arange(103)*1.0
+	y1 = np.arange(103)*2.0
+	y2 = np.arange(105)*6.0
+	x2 = np.arange(107)*1.0
+
+	data = [[y,x],[y1**2, x1],[y2**3,x2]]
+
+	transform = fsmooth(reflexive, method = smooth_, N = 10)
+	transform = fsmooth(subtract, method = smooth_, N=10)
+
+	a = transform(data)
+	for i in a:
+		print i
+
+

@@ -6,8 +6,8 @@ import numpy as np
 import time
 import os
 import sys
-import Transformations
 import DataTables
+from DataTables import Transformations
 import Science
 import tkFont
 
@@ -52,7 +52,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		##################
 
 
-		self.Manipulation = Tk.Frame(self)
+		#self.Manipulation = Tk.Frame(self)
 		self.Properties = Tk.Frame(self)
 		self.PLOT = PlottingWindow(self)
 		self.PLOT.AddSubplot()
@@ -94,13 +94,13 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		self.NextButton = Tk.Button(self.Navigation, text = 'Next', command = self.NEXT)
 		self.PreviousButton = Tk.Button(self.Navigation, text = 'Previous', command = self.PREV)
 
-		self.Toggle2D = Tk.Button(self.Manipulation, text = 'View Subtraction', command = self.toggle2d)
+		#self.Toggle2D = Tk.Button(self.Manipulation, text = 'View Subtraction', command = self.toggle2d)
 
 		#self.SaveSession = Tk.Button(self.Manipulation, text = 'Save', command = self.data.saveInterestingObjects)
 
 		#Packing
 
-		self.Manipulation.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
+		#self.Manipulation.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
 		self.Navigation.pack(side = Tk.BOTTOM, expand = 0, fill = Tk.X)
 		self.Properties.pack(side = Tk.LEFT, expand = 0, fill = Tk.BOTH)
 		#self.Views.pack(side = Tk.RIGHT, expand = 0, fill = Tk.BOTH)	
@@ -110,7 +110,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		self.NextButton.pack(side = Tk.RIGHT, expand = 1, fill = Tk.X)
 		self.PreviousButton.pack(side = Tk.RIGHT, fill = Tk.X, expand = 1)
 		self.ToggleSlineView.pack(side = Tk.TOP, expand = 0, fill = Tk.BOTH)
-		self.Toggle2D.pack(side = Tk.RIGHT, expand = 1, fill = Tk.X)
+		#self.Toggle2D.pack(side = Tk.RIGHT, expand = 1, fill = Tk.X)
 		#self.SaveSession.pack(side = Tk.RIGHT, expand = 1, fill = Tk.X)
 
 		#Plot Properties
@@ -123,8 +123,10 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		#Default Transformations
 
 		self.Transform = []
-		self.Transform.append(Transformations.smooth)
-		self.Transform.append(Transformations.smooth)
+		self.smoothing = Transformations.smooth_
+		self.smoothingargs = {'N':10}	
+		self.Transform.append(Transformations.reflexive)
+		self.Transform.append(Transformations.reflexive)
 
 		self.NEXT()
 	
@@ -154,7 +156,11 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 		T0 = time.clock()
 
-		if Transform == None: Transform = self.Transform[ax_index]
+		if Transform == None: 
+
+			Transform = self.Transform[ax_index]
+
+		Transform = Transformations.fsmooth(Transform, method = self.smoothing, **self.smoothingargs)
 
 		self.PLOT.ClearPlot(ax_index)
 
@@ -202,8 +208,8 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		if n < len(self.data.currentData) and n < self.data.DataPosition + 32:
 			for i in self.data[self.data.FullData[n]].getMembers(): 
 
-				thread.start_new_thread(i.getSpectrum,())
-			self.after(5000,self.backgroundTasks, n+1)
+				thread.start_new_thread(i.loadSpectrum,())
+			self.after(3000,self.backgroundTasks, n+1)
 		else:
 
 			print "Idle"
@@ -223,30 +229,30 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 		self.updateFields()	
 
-	def toggle2d(self):
+	#def toggle2d(self):
 
-		if self.Toggle2D["text"] == 'View Subtraction':
+	#	if self.Toggle2D["text"] == 'View Subtraction':
 
-			self.Toggle2D["text"] = 'View Division'
-			self.Transform[1] = Transformations.subtract
-			self.UpdatePlots()
+	#		self.Toggle2D["text"] = 'View Division'
+	#		self.Transform[1] = Transformations.subtract
+	#		self.UpdatePlots()
 
-		else:
+	#	else:
 	
-			self.Toggle2D["text"] = 'View Subtraction'
-			self.Transform[1] = Transformations.divide
-			self.UpdatePlots()
+	#		self.Toggle2D["text"] = 'View Subtraction'
+	#		self.Transform[1] = Transformations.divide
+	#		self.UpdatePlots()
 
 	def UpdatePlots(self):
 
 		self.plotCurrent(0)
 		if len(self.data()) < 2:
-			T = Transformations.smooth
-			self.Toggle2D["state"] = Tk.DISABLED
+			T = Transformations.reflexive
+			#self.Toggle2D["state"] = Tk.DISABLED
 		else:
 			T = self.Transform[1]
-			self.Toggle2D["state"] = Tk.NORMAL
-		self.plotCurrent(1, self.Transform[1])
+			#self.Toggle2D["state"] = Tk.NORMAL
+		self.plotCurrent(1, T)
 		self.PLOT.update()
 		self.updateFields()
 
@@ -337,6 +343,7 @@ class App(Tk.Tk):
 		##########################################
 
 		self.Info = None
+		self.Mangler = None
 		self.menubar = Tk.Menu(self)
 		self.views = Tk.Menu(self.menubar)
 		self.new = Tk.Menu(self.menubar)
@@ -353,6 +360,8 @@ class App(Tk.Tk):
 		self.views.add_command(label="Tags", command=self.tagSelection)
 		self.views.add_command(label="Info", command=self.viewObjectInfo)
 		self.tools.add_command(label="Download", command = self.browseServer)
+		self.tools.add_command(label="Override Redshift", command = self.changeZ)
+		self.tools.add_command(label="Transform Data", command = self.mangle)
 
 		self.menubar.add_cascade(label = "View", menu = self.views)
 		self.menubar.add_cascade(label = "New", menu = self.new)
@@ -361,6 +370,26 @@ class App(Tk.Tk):
 		self.config(menu = self.menubar)
 		msgBox.withdraw()
 		self.deiconify()
+
+	def mangle(self):
+
+		if self.Mangler == None:
+			self.Mangler = DataTables.DataMangler(self)
+			self.Mangler.protocol("WM_DELETE_WINDOW", self.Mangler.withdraw)
+		else:
+			self.Mangler.deiconify()
+		self.Mangler.update()
+
+	def changeZ(self):
+
+		window = Tk.Toplevel(self)
+		window.title("Change Redshift")
+		frame = DataTables.OverrideData(window, self.MainWindow.data)
+		frame.pack()
+		self.wait_window(frame.entry)
+		self.MainWindow.data.update()
+		self.MainWindow.updateFields()
+		
 
 	def browseServer(self):
 
