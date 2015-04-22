@@ -46,29 +46,86 @@ class AutoEntry(Tk.Entry):
 
 class DataMangler(Tk.Toplevel):
 
-	def __init__(self, master):
+	def __init__(self, master, TAGS):
 
 		Tk.Toplevel.__init__(self)
 		self.title("Data Mangler")
 		self.master = master
 		self.smoothing = SmoothingManager(self)
 		self.transforming = TransformationManager(self)
-		#self.normalizing = Tk.LabelFrame(self, text = "Normalizing")
-		#self.transforming = Tk.LabelFrame(self, text = "Transformations")
+		self.normalizing = NormalizeManager(self, TAGS)
+
 		self.smoothing.pack(side = Tk.RIGHT, expand = 1, fill = Tk.BOTH)
 		self.transforming.pack(side = Tk.LEFT, expand = 1, fill = Tk.BOTH)
+		self.normalizing.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH) 
 
 	def smoothReturn(self, version, params):
 
 		self.master.MainWindow.smoothing = version
 		self.master.MainWindow.smoothingargs = params
-
 		self.master.MainWindow.UpdatePlots()
 	
 	def transformReturn(self, version):
 
 		self.master.MainWindow.Transform[1] = version
 		self.master.MainWindow.UpdatePlots()
+
+	def normalizeReturn(self, version, params):
+
+		self.master.MainWindow.normalize = version
+		self.master.MainWindow.normargs = params
+		self.master.MainWindow.UpdatePlots()
+
+class NormalizeManager(Tk.LabelFrame):
+
+	def __init__(self, master, TAGS):
+
+		Tk.LabelFrame.__init__(self, master)
+		self['text'] = "Normalizations"
+		self.TAGS = TAGS
+		self.master = master
+		self.types = {1:None,2:Transformations.normalize_int,3:Transformations.normalize_wave}
+		self.params = {1:{},2:{},3:{}}
+		self.selection = Tk.IntVar()
+		self.none = Tk.Radiobutton(self, text = "None", variable = self.selection, value = 1, command = self.accept, justify = Tk.LEFT, anchor = Tk.W)
+		self.Int = Tk.Radiobutton(self, text = "Area", variable = self.selection, value = 2, command = self.accept, justify = Tk.LEFT, anchor = Tk.W)
+		self.Wave = Tk.Radiobutton(self, text = "Wavelength", variable = self.selection, value = 3, command = self.accept, justify = Tk.LEFT, anchor = Tk.W)
+		self.wave_length = Tk.Listbox(self)
+	
+		self.Int.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
+		self.Wave.pack(side = Tk.TOP, expand = 0, fill = Tk.X)	
+		self.none.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
+		self.wave_length.bind('<Button-1>', lambda event: self.after_idle(self.getWave))
+		self.none.select()
+
+	def setupWave(self):
+
+		self.wave_length.pack(side = Tk.BOTTOM, expand = 0, fill = Tk.BOTH)
+		self.wave_length.delete(0,Tk.END)
+		for i in self.TAGS.items():
+			if i[1] > 0:
+				self.wave_length.insert(Tk.END, i[0])
+	
+	def getWave(self): #What a mess
+
+		try:
+			index = self.wave_length.curselection()[0]
+			wave = [i for i in self.TAGS.values() if i > 0][index]*(1+self.master.master.MainWindow.data()['REDSHIFT'])
+			print wave
+			self.params[3] = {'wavelength':wave}
+			self.master.normalizeReturn(self.types[self.selection.get()], self.params[self.selection.get()])	 
+		except Tk.TclError:
+			return
+	
+	def accept(self, *args):
+
+		if self.selection.get() == 3:
+
+			return self.setupWave()
+		else:
+		
+			self.wave_length.pack_forget()
+		self.master.normalizeReturn(self.types[self.selection.get()], self.params[self.selection.get()])	 
 
 class TransformationManager(Tk.LabelFrame):
 

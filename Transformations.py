@@ -54,22 +54,12 @@ def normalize_wave(Data, wavelength = 6564.61):
 	for i in Data:
         	Diff = np.absolute(i[1] - wavelength)
        		separation = min(Diff)
+		if separation > 1.0:
+			return Data
         	scale = 1.0/(i[0][np.where(Diff == separation)[0][0]])
         	result.append([i[0]*scale,i[1]])
 	return result
 
-def normalize_(Data, version = normalize_int, **kwargs):
-
-	return version(Data, **kwargs)
-
-
-def normalize(f):
-
-	def wrap(*args, **kwargs):
-
-		return normalize_(f(*args, **kwargs))
-
-	return wrap
 
 def FootPrint_(Data):
 
@@ -138,6 +128,7 @@ def smooth(Data, method = smooth_, N = 0, **kwargs): #Vectorization of the smoot
 	return result
 
 
+
 def fsmooth(function, method = smooth_, **smoothargs):
 
 	def wrapper(Data, **kwargs):
@@ -148,7 +139,13 @@ def fsmooth(function, method = smooth_, **smoothargs):
 
 	return wrapper
 
+def normalize(f, method = normalize_int, **params):
 
+	def wrap(Data, **kwargs):
+
+		return f(method(Data, **params), **kwargs)
+
+	return wrap
 
 if __name__ == '__main__':
 
@@ -163,7 +160,7 @@ if __name__ == '__main__':
 	data = [[y,x],[y1**2, x1],[y2**3,x2]]
 
 	transform = fsmooth(reflexive, method = smooth_, N = 10)
-	transform = fsmooth(subtract, method = smooth_, N=10)
+	transform = normalize(fsmooth(subtract, method = smooth_, N=10))
 
 	a = transform(data)
 	for i in a:

@@ -6,9 +6,9 @@ import numpy as np
 import time
 import os
 import sys
+import Science
 import DataTables
 from DataTables import Transformations
-import Science
 import tkFont
 
 try:
@@ -124,7 +124,9 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 		self.Transform = []
 		self.smoothing = Transformations.smooth_
-		self.smoothingargs = {'N':10}	
+		self.smoothingargs = {'N':10}
+		self.normalize = None
+		self.normargs = {}	
 		self.Transform.append(Transformations.reflexive)
 		self.Transform.append(Transformations.reflexive)
 
@@ -161,6 +163,10 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 			Transform = self.Transform[ax_index]
 
 		Transform = Transformations.fsmooth(Transform, method = self.smoothing, **self.smoothingargs)
+
+		if self.normalize is not None:
+
+			Transform = Transformations.normalize(Transform, self.normalize, **self.normargs)
 
 		self.PLOT.ClearPlot(ax_index)
 
@@ -396,7 +402,7 @@ class App(Tk.Tk):
 	def mangle(self):
 
 		if self.Mangler == None:
-			self.Mangler = DataTables.DataMangler(self)
+			self.Mangler = DataTables.DataMangler(self, Science.TAGS)
 			self.Mangler.protocol("WM_DELETE_WINDOW", self.Mangler.withdraw)
 		else:
 			self.Mangler.deiconify()
