@@ -45,7 +45,7 @@ def normalize_int(Data, **kwargs):
 
 	result = []
 	for i in Data:
-		result.append([i[0]/sum(i[0]), i[1]])
+		result.append([i[0]/sum(i[0][np.logical_and(i[1]>4000.0, i[1]<9000.0)]), i[1]])
 	return result
 
 def normalize_wave(Data, wavelength = 6564.61):
