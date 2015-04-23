@@ -58,6 +58,7 @@ class DataMangler(Tk.Toplevel):
 		self.smoothing.pack(side = Tk.RIGHT, expand = 1, fill = Tk.BOTH)
 		self.transforming.pack(side = Tk.LEFT, expand = 1, fill = Tk.BOTH)
 		self.normalizing.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH) 
+		self.plotLabels = {Transformations.divide:'Ratio', Transformations.subtract:'Difference', Transformations.reflexive:'Flux'}
 
 	def smoothReturn(self, version, params):
 
@@ -68,6 +69,7 @@ class DataMangler(Tk.Toplevel):
 	def transformReturn(self, version):
 
 		self.master.MainWindow.Transform[1] = version
+		self.master.MainWindow.PLOT.ax[1].set_ylabel(self.plotLabels[version])
 		self.master.MainWindow.UpdatePlots()
 
 	def normalizeReturn(self, version, params):

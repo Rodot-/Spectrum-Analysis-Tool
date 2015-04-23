@@ -1,4 +1,6 @@
 from PlottingClasses import *
+from astropy.coordinates import SkyCoord
+from astropy.units import degree
 from matplotlib.widgets import MultiCursor
 from Config import PATH
 import copyTesting as DataClasses
@@ -115,10 +117,10 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 		#Plot Properties
 
-		self.PLOT.ax[0].set_ylabel(r'$\mathtt{Flux}$')
-		self.PLOT.ax[1].set_ylabel(r'$\mathtt{Flux}$')
-		self.PLOT.ax[1].set_xlabel(r'$\mathtt{\lambda \/ (\AA)}$')
-		self.PLOT.ax[0].set_xlabel(r'$\mathtt{\lambda \/ (\AA)}$')
+		self.PLOT.ax[0].set_ylabel('Flux')
+		self.PLOT.ax[1].set_ylabel('Flux')
+		self.PLOT.ax[1].set_xlabel(r'$\lambda \/ (\AA)$')
+		#self.PLOT.ax[0].set_xlabel(r'$\mathrm{\lambda \/ (\AA)}$')
 
 		#Default Transformations
 
@@ -139,6 +141,14 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
                 self.cursor = MultiCursor(self.PLOT.fig.canvas,(self.PLOT.ax[0], self.PLOT.ax[1]), color='#999999', linewidth=1.0 , useblit = True)
 	
 		self.backgroundTasks(0)
+
+	def to_SDSSName(self):
+
+		ra, dec =  str(SkyCoord(ra = self.data()['RA']*degree, dec = self.data()['DEC']*degree).to_string('hmsdms')).translate(None, 'hmsd').split()
+		ra = ra[0:9]
+		dec = dec[0:10]
+		return "".join(("SDSS J",ra,dec))
+		 
 
 	def showViews(self):
 
@@ -251,16 +261,17 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 	def UpdatePlots(self):
 
+		T0 = time.clock()
+		self.updateFields()
 		self.plotCurrent(0)
 		if len(self.data()) < 2:
 			T = Transformations.reflexive
-			#self.Toggle2D["state"] = Tk.DISABLED
 		else:
 			T = self.Transform[1]
-			#self.Toggle2D["state"] = Tk.NORMAL
 		self.plotCurrent(1, T)
+		self.PLOT.fig.suptitle(self.to_SDSSName())
 		self.PLOT.update()
-		self.updateFields()
+		print "Total Updating Time:", time.clock() - T0
 
 	def updateFields(self):
 
