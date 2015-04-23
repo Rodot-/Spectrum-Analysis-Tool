@@ -269,7 +269,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		else:
 			T = self.Transform[1]
 		self.plotCurrent(1, T)
-		self.PLOT.fig.suptitle(self.to_SDSSName())
+		#self.PLOT.fig.suptitle(self.to_SDSSName())
 		self.PLOT.update()
 		print "Total Updating Time:", time.clock() - T0
 
