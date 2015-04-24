@@ -144,7 +144,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 	def to_SDSSName(self):
 
-		ra, dec =  str(SkyCoord(ra = self.data()['RA']*degree, dec = self.data()['DEC']*degree).to_string('hmsdms')).translate(None, 'hmsd').split()
+		ra, dec =  str(SkyCoord(ra = self.data()['RA']*degree, dec = self.data()['DEC']*degree, equinox = 'J2000').to_string('hmsdms')).translate(None, 'hmsd').split()
 		ra = ra[0:9]
 		dec = dec[0:10]
 		return "".join(("SDSS J",ra,dec))
@@ -269,7 +269,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		else:
 			T = self.Transform[1]
 		self.plotCurrent(1, T)
-		#self.PLOT.fig.suptitle(self.to_SDSSName())
+		self.PLOT.fig.suptitle(self.to_SDSSName())
 		self.PLOT.update()
 		print "Total Updating Time:", time.clock() - T0
 
