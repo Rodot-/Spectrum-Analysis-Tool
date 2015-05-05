@@ -255,11 +255,11 @@ class Data(object):
 
 		return len(self.currentData)
 
-	def sort(self):	
+	def sort(self, field = 'REDSHIFT'):	
 
 		T0 = time.clock()
 
-		index = iter(np.argsort([self.groupList[i].Data['REDSHIFT'] for i in self.currentData]))
+		index = iter(np.argsort([self.groupList[i].Data[field] for i in self.currentData]))
 
 		self.currentData = np.array([self.currentData[i] for i in index])
 
@@ -344,6 +344,106 @@ class Data(object):
 		self.tagState = list(set(self.tagState) - set(args))
 
 		if len(self.tagState) == 0: self.appendTagState(("None",'u'))
+
+	def search(self, subset = None, **params): #Search function.  Params are RA, DEC, MJD, PLATEID, FIBERID, REDSHIFT, GroupID.  Params may be tuples for multiple value searching.  Returns a list of indecies 
+		T0 = time.clock() 	
+	
+		if subset is None:
+
+			subset = self.FullData
+
+		old_set = subset
+
+		groupProps = ['RA','DEC','GroupID','REDSHIFT'] #List of group Properties
+		specProps = ['FILENAME','MJD','PLATEID','FIBERID']
+
+		group = dict([item for item in params.items() if item[0] in groupProps])
+		
+		spec = dict([item for item in params.items() if item[0] in specProps])
+
+		subset = self.searchGroup(subset, **group)
+
+		subset = self.searchSpectrum(subset, **spec)
+
+		print "Search Single Time: ", time.clock() - T0
+
+		if subset is old_set:
+
+			return np.array([])
+
+		return np.array(list(set(subset)))	
+		
+	def searchSpectrum(self, subset, **params):
+
+		if not params:
+
+			return subset
+
+		result = []
+
+		for item in params.items():
+
+			for group in subset:
+
+				for spectrum in self.groupList[group].getMembers():
+
+					if spectrum[item[0]] == item[1]:
+
+						result.append(group)
+
+			subset = np.array(result)
+			result = []
+
+		return subset
+
+	def searchGroup(self, subset, **params):
+
+		if not params:
+
+			return subset
+
+		result = []
+		error = 0
+
+		for item in params.items():
+
+			for group in subset:
+
+				if type(item[1]) is tuple:
+
+					error = item[1][1]
+					obj = item[1][0]
+
+				else:
+
+					error = 0
+					obj = item[1]
+
+				if abs(self.groupList[group].Data[item[0]] - obj) <= error:
+
+					result.append(group)
+
+			subset = np.array(result)
+			result = []
+
+		return subset
+
+if __name__ == '__main__':
+
+	data = Data()
+	data.sort('RA')
+	data.currentData = data.search(RA = (193.93, 8), DEC = (50.017,8), MJD = 52736, REDSHIFT = (0,3))
+	#data.update()
+
+	print "------------------------------------"
+	for dat in data:
+		print dat['GroupID'], dat['RA'], dat['DEC'], dat['REDSHIFT']
+		for spec in dat.getMembers():
+			print "|--",spec['MJD'], spec['PLATEID'], spec['FIBERID']
+		print "------------------------------------"
+
+
+
 
 #T0 = time.clock()
 #a = Data()

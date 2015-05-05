@@ -20,6 +20,7 @@ class AutoEntry(Tk.Entry):
 		self.dtype = dtype
 		self.default_text = default_text
 		self.bind('<Button-1>', lambda event: self.stopReplacing())
+		self.bind('<FocusOut>', lambda event: self.replaceText())
 		self.replaceText()
 
 	def replaceText(self):
@@ -34,6 +35,12 @@ class AutoEntry(Tk.Entry):
 	def getSelection(self):
 
 		value = self.get()
+		if value == self.default_text:
+			return None
+		elif value == "":
+			self.replaceText()
+			return None
+
 		try:
 			result = self.dtype(value)
 			return result

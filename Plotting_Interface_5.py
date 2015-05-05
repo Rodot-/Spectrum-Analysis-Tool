@@ -1,8 +1,8 @@
 from PlottingClasses import *
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, Angle
 from astropy.units import degree
 from matplotlib.widgets import MultiCursor
-from Config import PATH
+from Config import PATH, bcolors
 import copyTesting as DataClasses
 import numpy as np
 import time
@@ -228,7 +228,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 			self.after(3000,self.backgroundTasks, n+1)
 		else:
 
-			print "Idle"
+			print bcolors.OKBLUE,"Auto Saved",bcolors.ENDC
 			self.after(60000, self.backgroundTasks, self.data.DataPosition+1)
 			thread.start_new_thread(self.saveData,('Autosave.csv',))
 
@@ -302,7 +302,6 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 	def saveData(self, Filename = "InterestingMatches.csv"):
 
-		T0 = time.time()
 		fields = ['MJD','PLATEID','FIBERID','RA','DEC','REDSHIFT','FILENAME','Interesting']
 
 		MarkedObjects = np.array([])
@@ -334,7 +333,102 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		with open('resource/tags.conf','wb') as tagFile: 
 			for i in Science.TAGS.items(): tagFile.write("".join((" ".join((str(i[0]),str(i[1]))),'\n')))
 
-		print "Save Time: ", time.time() - T0
+		print bcolors.OKGREEN, "Saved", bcolors.ENDC
+
+class SearchTool(Tk.Toplevel):
+
+	def __init__(self, master, data):
+
+		Tk.Toplevel.__init__(self, master)
+		self.title('Search Tool')
+		self.data = data
+		self.master = master
+
+		self.search_params = dict(zip(['RA','DEC','MJD','PLATEID','FIBERID','GroupID','REDSHIFT'],[None]*8))
+
+		self.spec = Tk.LabelFrame(self)
+		self.coordinates = Tk.LabelFrame(self)
+
+		self.MJD = DataTables.AutoEntry(self.spec, 'MJD (int)', int)
+		self.PLATE = DataTables.AutoEntry(self.spec, 'PLATE (int)', int)
+		self.FIBER = DataTables.AutoEntry(self.spec, 'FIBER (int)', int)
+		self.RA = DataTables.AutoEntry(self.coordinates, 'RA (deg, h:m:s, h m s)', str)
+		self.DEC = DataTables.AutoEntry(self.coordinates, 'DEC (deg, d:m:s, d m s)', str)
+		self.accept = Tk.Button(self, text = 'Search', command = self.search)
+		self.RA.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
+		self.DEC.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
+		self.MJD.pack(side = Tk.LEFT, expand = 0, fill = Tk.X)
+		self.PLATE.pack(side = Tk.LEFT, expand = 0, fill = Tk.X)
+		self.FIBER.pack(side = Tk.LEFT, expand = 0, fill = Tk.X)
+		
+		self.accept.pack(side = Tk.BOTTOM, expand = 0, fill = Tk.X)
+		self.spec.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+		self.coordinates.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+
+	def __call__(self):
+	
+		for i in (self.RA, self.DEC, self.MJD, self.FIBER, self.PLATE):
+			i.replaceText()
+
+	def search(self):
+
+		self.search_params['RA'] = self.RA.getSelection()
+		self.search_params['DEC'] = self.DEC.getSelection()
+		self.search_params['MJD'] = self.MJD.getSelection()
+		self.search_params['PLATEID'] = self.PLATE.getSelection()
+		self.search_params['FIBERID'] = self.FIBER.getSelection()
+		search_dict = dict()
+		for i in self.search_params.items():
+			error = None
+			if i[1] is not None:
+				if i[0] == 'RA':
+					term = self.parseRaDec(i[1], 'hms')
+					s = str(term)
+					error = 1.0/10**(len(s[s.find('.'):])-1)
+				elif i[0] == 'DEC':
+					term = self.parseRaDec(i[1], 'dms')
+					s = str(term)
+					error = 1.0/10**(len(s[s.find('.'):])-1)
+				else:
+					term = i[1]
+				if error is None:
+					item = term
+				else:
+					item = (term, error)
+				search_dict.setdefault(i[0],item)
+
+		result = self.data.search(self.data.currentData, **search_dict)
+		print search_dict
+		print result
+		if len(result) == 1:
+			self.data.DataPosition = np.where(self.data.currentData == result[0])[0][0]
+			self.master.MainWindow.UpdatePlots()
+		elif len(result) > 1:
+	
+			print "Multiple Results Found:"
+			for i in result:
+				group = self.data[i]
+				print '   RA:',group['RA'],"DEC:",group['DEC'] 
+				for j in group.getMembers():
+					print '      MJD:',j['MJD'],'PLATE:',j['PLATEID'],'FIBER:',j['FIBERID']
+		else:
+
+			print "No Results Found"
+
+
+	def parseRaDec(self, coord, units): #Parses Ra, Dec input
+
+		coord = coord.strip()
+		if coord.count(' ') == 2 or coord.count(':') == 2:	
+			separator = ' ' if coord.find(' ')+1 else ':'
+			coord = "".join((coord, ' '))
+			for i in units:
+				coord = coord.replace(separator, i, 1)
+			coord = float(Angle(coord).to_string(decimal = True))
+		else:
+			coord = float(coord)
+		return coord	
+
 
 class App(Tk.Tk):
 
@@ -361,6 +455,7 @@ class App(Tk.Tk):
 
 		self.Info = None
 		self.Mangler = None
+		self.SearchBar = None
 		self.menubar = Tk.Menu(self)
 		self.views = Tk.Menu(self.menubar)
 		self.new = Tk.Menu(self.menubar)
@@ -382,6 +477,7 @@ class App(Tk.Tk):
 	
 		self.tools.add_command(label="Run Matching", command = self.runMatching)
 		self.tools.add_command(label="Reload Data", command = self.reloadData)
+		self.tools.add_command(label="Search", command = self.searchTool)
 		self.menubar.add_cascade(label = "View", menu = self.views)
 		self.menubar.add_cascade(label = "New", menu = self.new)
 		self.menubar.add_cascade(label = "Tools", menu = self.tools)
@@ -389,6 +485,17 @@ class App(Tk.Tk):
 		self.config(menu = self.menubar)
 		msgBox.withdraw()
 		self.deiconify()
+
+	def searchTool(self):
+
+		if self.SearchBar is None:
+
+			self.SearchBar = SearchTool(self, self.MainWindow.data)
+			self.SearchBar.protocol("WM_DELETE_WINDOW", self.SearchBar.withdraw)
+		else:
+			self.SearchBar.deiconify()
+		self.SearchBar()
+		self.SearchBar.update()
 
 	def reloadData(self):
 
@@ -525,6 +632,8 @@ class App(Tk.Tk):
 		self.after_idle(self.quit)
 		self.after_idle(self.destroy)
 
-app = App()
-app.mainloop()
+if __name__ == '__main__':
+
+	app = App()
+	app.mainloop()
 
