@@ -4,6 +4,7 @@ from Config import PATH, MIN_GROUP_SIZE
 from astropy.io import fits
 import time
 import sys
+from multiprocessing import Process, Pipe
 
 #TODO: Most methods haven't been checked for bugs.  
 
@@ -148,13 +149,24 @@ class Spectrum(object):
 
 		return [self.Flux, self.Lambda]
 
-	def loadSpectrum(self):
+	def ploadSpectrum(self): #Background Spectrum Loading
+		
+		parent, child = Pipe()
+		p = Process(target = self.loadSpectrum, args = (child,))
+		p.start()
+		self.Flux, self.Lambda = parent.recv()
+		p.join()
 
-		if len(self.Flux) == 0 or len(self.Lambda) == 0:
+	def loadSpectrum(self, pipe = None):
+
+		if self.Flux == [] or self.Lambda == []:
 			Data = fits.open("/".join((PATH,str(self['FILENAME']))))
 			self.Flux = Data[1].data['flux']
 			self.Lambda = np.power(10,Data[1].data['loglam'])
 			Data.close()
+			#print "Loaded A Spectrum of", self
+		if pipe:
+			pipe.send([self.Flux, self.Lambda])
 
 	def __repr__(self):
 

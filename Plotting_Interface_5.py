@@ -131,6 +131,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		self.normargs = {}	
 		self.Transform.append(Transformations.reflexive)
 		self.Transform.append(Transformations.reflexive)
+		self.annotations = dict()
 
 		self.UpdatePlots()		
 
@@ -141,6 +142,62 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
                 self.cursor = MultiCursor(self.PLOT.fig.canvas,(self.PLOT.ax[0], self.PLOT.ax[1]), color='#999999', linewidth=1.0 , useblit = True)
 	
 		self.backgroundTasks(0)
+
+		#self.add_ticks()
+		self.on_move_id = self.PLOT.fig.canvas.mpl_connect('motion_notify_event', self.on_move)
+		self.on_resize_id = self.PLOT.fig.canvas.mpl_connect('draw_event', self.on_draw)
+		self.annotate_ticks()
+
+	def on_draw(self, event):
+	
+		self.bg = None #Used for the on_move event with axes resizing.
+
+	def on_move(self,event):#http://stackoverflow.com/questions/11537374/matplotlib-basemap-popup-box/11556140#11556140
+
+		visibility_changed = False
+		if not event.inaxes:return
+		if self.bg is None:
+			self.bg = self.cursor.background
+		#Copies the cursors background for reference.
+		annotations = self.annotations.values()
+		for annotation in annotations:
+			ex = event.x #X mouse position
+			x, y = self.PLOT.ax[0].transData.transform(annotation.xy)
+			#Transform Data to Figure coords
+			should_be_visible = abs(x-ex) < 25 #Threshold
+			if should_be_visible != annotation.get_visible():
+				visibility_changed = True
+				annotation.set_visible(should_be_visible)
+				#Make annotations visible
+		if visibility_changed:
+			self.PLOT.fig.canvas.restore_region(self.bg)
+			#Restore the background region
+			for annotation in annotations: #Draw the annotations
+				if annotation.get_visible():
+					self.PLOT.ax[0].draw_artist(annotation)
+			#draw the annotations and update the cursors background to prevent overwrites
+			self.PLOT.canvas.blit(self.PLOT.fig.bbox)
+			self.cursor.background = self.PLOT.canvas.copy_from_bbox(self.PLOT.fig.bbox)
+
+	def annotate_ticks(self): #Create tick labels for hover
+
+		scale = 1 + self.data()['REDSHIFT']
+		specs = sorted([i for i in Science.TAGS.items() if i[1]], key = lambda x: x[1])
+		lastx = 0
+		trans = self.PLOT.ax[0].get_xaxis_transform()
+		xs = self.PLOT.ax[0].get_xlim()
+		for line in specs:
+			wave = line[1] * scale
+			k = 0.05 if wave-lastx < 500 else 0
+			if line[0] not in self.annotations:
+				if xs[0] < wave < xs[1]:
+					Label = line[0].replace('\xce\xb1',r'\alpha',1).replace('\xce\xb2',r'\beta',1)
+					Label = r"".join(('$',Label[:-1],'$'))
+					self.annotations[line[0]] = self.PLOT.ax[0].annotate(Label, xy = (wave, -1.0), xytext = (wave, 1.05 + k), visible = False, arrowprops = dict(arrowstyle = '-', lw = 1.0), ha = 'center', fontsize = 10, xycoords = trans, animated = True)	
+			else:
+				self.annotations[line[0]].xy = (wave, -1.0)
+				self.annotations[line[0]].xyann = (wave,1.05 + k)
+			lastx = wave
 
 	def to_SDSSName(self):
 
@@ -221,11 +278,12 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 	def backgroundTasks(self, n = 0):
 
-		if n < len(self.data.currentData) and n < self.data.DataPosition + 32:
+		if n < len(self.data.currentData) and n < self.data.DataPosition + 64:
 			for i in self.data[self.data.FullData[n]].getMembers(): 
 
-				thread.start_new_thread(i.loadSpectrum,())
-			self.after(3000,self.backgroundTasks, n+1)
+				thread.start_new_thread(i.ploadSpectrum,())
+				#i.ploadSpectrum()
+			self.after(100,self.backgroundTasks, n+1)
 		else:
 
 			print bcolors.OKBLUE,"Auto Saved",bcolors.ENDC
@@ -245,19 +303,6 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 		self.updateFields()	
 
-	#def toggle2d(self):
-
-	#	if self.Toggle2D["text"] == 'View Subtraction':
-
-	#		self.Toggle2D["text"] = 'View Division'
-	#		self.Transform[1] = Transformations.subtract
-	#		self.UpdatePlots()
-
-	#	else:
-	
-	#		self.Toggle2D["text"] = 'View Subtraction'
-	#		self.Transform[1] = Transformations.divide
-	#		self.UpdatePlots()
 
 	def UpdatePlots(self):
 
@@ -271,6 +316,8 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		self.plotCurrent(1, T)
 		self.PLOT.fig.suptitle(self.to_SDSSName())
 		self.PLOT.update()
+		self.annotate_ticks()
+		self.bg = None
 		print "Total Updating Time:", time.clock() - T0
 
 	def updateFields(self):
@@ -348,22 +395,28 @@ class SearchTool(Tk.Toplevel):
 
 		self.spec = Tk.LabelFrame(self)
 		self.coordinates = Tk.LabelFrame(self)
+		self.misc = Tk.LabelFrame(self)
 
 		self.MJD = DataTables.AutoEntry(self.spec, 'MJD (int)', int)
 		self.PLATE = DataTables.AutoEntry(self.spec, 'PLATE (int)', int)
 		self.FIBER = DataTables.AutoEntry(self.spec, 'FIBER (int)', int)
 		self.RA = DataTables.AutoEntry(self.coordinates, 'RA (deg, h:m:s, h m s)', str)
 		self.DEC = DataTables.AutoEntry(self.coordinates, 'DEC (deg, d:m:s, d m s)', str)
+		self.GroupID = DataTables.AutoEntry(self.misc, 'Group ID (int)', int)
+		self.Redshift = DataTables.AutoEntry(self.misc, 'Redshift (float)', float)
 		self.accept = Tk.Button(self, text = 'Search', command = self.search)
 		self.RA.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
 		self.DEC.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
 		self.MJD.pack(side = Tk.LEFT, expand = 0, fill = Tk.X)
 		self.PLATE.pack(side = Tk.LEFT, expand = 0, fill = Tk.X)
 		self.FIBER.pack(side = Tk.LEFT, expand = 0, fill = Tk.X)
-		
+		self.Redshift.pack(side = Tk.TOP, expand = 0, fill = Tk.X)	
+		self.GroupID.pack(side = Tk.TOP, expand = 0, fill = Tk.X)	
+	
 		self.accept.pack(side = Tk.BOTTOM, expand = 0, fill = Tk.X)
 		self.spec.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
-		self.coordinates.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+		self.coordinates.pack(side = Tk.LEFT, expand = 1, fill = Tk.BOTH)
+		self.misc.pack(side = Tk.RIGHT, expand = 1, fill = Tk.BOTH)
 
 	def __call__(self):
 	
@@ -377,6 +430,10 @@ class SearchTool(Tk.Toplevel):
 		self.search_params['MJD'] = self.MJD.getSelection()
 		self.search_params['PLATEID'] = self.PLATE.getSelection()
 		self.search_params['FIBERID'] = self.FIBER.getSelection()
+		self.search_params['GroupID'] = self.GroupID.getSelection()
+		self.search_params['REDSHIFT'] = self.Redshift.getSelection()
+				
+
 		search_dict = dict()
 		for i in self.search_params.items():
 			error = None
@@ -387,6 +444,10 @@ class SearchTool(Tk.Toplevel):
 					error = 1.0/10**(len(s[s.find('.'):])-1)
 				elif i[0] == 'DEC':
 					term = self.parseRaDec(i[1], 'dms')
+					s = str(term)
+					error = 1.0/10**(len(s[s.find('.'):])-1)
+				elif i[0] == 'REDSHIFT':
+					term = i[1]		
 					s = str(term)
 					error = 1.0/10**(len(s[s.find('.'):])-1)
 				else:
@@ -424,7 +485,7 @@ class SearchTool(Tk.Toplevel):
 			coord = "".join((coord, ' '))
 			for i in units:
 				coord = coord.replace(separator, i, 1)
-			coord = float(Angle(coord).to_string(decimal = True))
+			coord = float(Angle(coord).to_string('deg',decimal = True))
 		else:
 			coord = float(coord)
 		return coord	
