@@ -277,11 +277,15 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 	def backgroundTasks(self, n = 0):
 
 		if n < len(self.data.currentData) and n < self.data.DataPosition + FILES_AHEAD:
-			for i in self.data[self.data.FullData[n]].getMembers(): 
+			for i in self.data[self.data.currentData[n]].getMembers(): 
 
 				thread.start_new_thread(i.ploadSpectrum,())
 				#i.ploadSpectrum()
-			self.after(100,self.backgroundTasks, n+1)
+			if self.data[self.data.currentData[n]].size() > 5:
+				t = 2000
+			else:
+				t = 100
+			self.after(t,self.backgroundTasks, n+1)
 		else:
 
 			print bcolors.OKBLUE,"Auto Saved",bcolors.ENDC
