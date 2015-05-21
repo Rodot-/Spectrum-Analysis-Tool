@@ -2,7 +2,7 @@ from PlottingClasses import *
 from astropy.coordinates import SkyCoord, Angle
 from astropy.units import degree
 from matplotlib.widgets import MultiCursor
-from Config import PATH, bcolors
+from Config import PATH, bcolors, FILES_AHEAD
 import copyTesting as DataClasses
 import numpy as np
 import time
@@ -12,6 +12,7 @@ import Science
 import DataTables
 from DataTables import Transformations
 import tkFont
+import _console
 
 try:
 	import thread
@@ -25,7 +26,10 @@ else:
 
 
 class PlottingInterface(Tk.Frame): #Example of a window application inside a frame
+	"""
+	This Main Plotting Interface.  \nManages graphics, data manipulation, and \nacts as the first abstraction layer\n for accessing the Data class.  \nThis class also handles save files \nand helps manage data loading.
 
+	"""
 	def __init__(self, master, Data):
 
 		self.data = Data
@@ -223,8 +227,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 	def plotCurrent(self, ax_index, Transform = None, **kwargs):
 
-		T0 = time.clock()
-
+		print "Plotting to axis",ax_index
 		if Transform == None: 
 
 			Transform = self.Transform[ax_index]
@@ -241,13 +244,8 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 		for i in DR: self.PLOT.Plot(i[1], i[0], ax_index)
 
-		print "Plot Lines Time: ", time.clock() - T0
-		T0 = time.clock()
-
 		self.PLOT.ax[ax_index].relim()
 		self.PLOT.ax[ax_index].autoscale(enable = True)
-	
-		print "Update Limits Time: ", time.clock() - T0
 
 	def toggleSline(self, tag, button, var, merge = 'u'):
 
@@ -278,7 +276,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 	def backgroundTasks(self, n = 0):
 
-		if n < len(self.data.currentData) and n < self.data.DataPosition + 64:
+		if n < len(self.data.currentData) and n < self.data.DataPosition + FILES_AHEAD:
 			for i in self.data[self.data.FullData[n]].getMembers(): 
 
 				thread.start_new_thread(i.ploadSpectrum,())
@@ -306,7 +304,6 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 	def UpdatePlots(self):
 
-		T0 = time.clock()
 		self.updateFields()
 		self.plotCurrent(0)
 		if len(self.data()) < 2:
@@ -318,11 +315,9 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		self.PLOT.update()
 		self.annotate_ticks()
 		self.bg = None
-		print "Total Updating Time:", time.clock() - T0
+		print "Updated to",self.data()
 
 	def updateFields(self):
-
-		T0 = time.time()
 
 		self.BasicInformation.setData([self.data().Data[i] for i in ['RA','DEC','REDSHIFT','GroupID']], 12)
 
@@ -334,8 +329,6 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		Marked = [(i in tags) for i in Science.TAGS.keys()]
 
 		self.ToggleSlineMark.setStates(Marked)
-
-		print "Update Fields Time: ", time.time() - T0
 
 	def toggleButtonRelief(self, Button, Bool):
 
@@ -358,21 +351,20 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 			if i != "None":
 
                                 MarkedObjects = np.union1d(MarkedObjects,np.array([j() for j in self.data[i].getMembers()]))
-	
+
 		InterestingFile = open(Filename,'wb')
 		InterestingFile.write('#MJD, PLATEID, FIBERID, RA, DEC, Z, FILENAME, ARGS, TAGS\n')
 
 
 		for i in MarkedObjects:	
 
-			for j in self.data[i].getMembers():	
+			for j in self.data[i].getMembers():
 
 				InterestingFile.write(", ".join([str(j[k]) for k in fields]))
 
 				InterestingFile.write(", ")
 
 				InterestingFile.write(" ".join([k.name for k in self.data[i].getTags()]))
-
 				InterestingFile.write('\n')
 
 		InterestingFile.close()
@@ -539,6 +531,7 @@ class App(Tk.Tk):
 		self.tools.add_command(label="Run Matching", command = self.runMatching)
 		self.tools.add_command(label="Reload Data", command = self.reloadData)
 		self.tools.add_command(label="Search", command = self.searchTool)
+		self.tools.add_command(label="Console", command = self.console)
 		self.menubar.add_cascade(label = "View", menu = self.views)
 		self.menubar.add_cascade(label = "New", menu = self.new)
 		self.menubar.add_cascade(label = "Tools", menu = self.tools)
@@ -546,6 +539,46 @@ class App(Tk.Tk):
 		self.config(menu = self.menubar)
 		msgBox.withdraw()
 		self.deiconify()
+
+	def console(self): #Opens a python console 
+		"""
+		Hints: 
+		|
+		| interface
+		|    The main GUI.  Higher level data manipulation and graphics.
+		| 
+		| data
+		|    The data managing class.  Lower level data manipulation.
+		|
+		| hints
+		|    This page.
+		|
+		| Science
+		|    View and edit tags and spectral lines.
+		|
+		| app
+		|    Highest level GUI.
+		|
+		| quit
+		|    Exit normally.
+		|
+		| exit
+		|    Exit without saving.  
+		|
+		"""
+
+		box = Tk.Toplevel()
+		var = self.MainWindow.__dict__.copy()
+		var.update(globals())
+		var.update({'interface':self.MainWindow})
+		var.update({'hints':(lambda *args:help(self.console))})
+		#var.update(locals())
+		var.update({'quit':self.Quit})
+		console = _console.console(box, var)
+		console.write(' Type "hints()" for hints.\n\n')
+		console.write(console.ps(console.incomplete))
+		console.pack(expand = 1, fill = Tk.BOTH)
+		box.update()
 
 	def searchTool(self):
 

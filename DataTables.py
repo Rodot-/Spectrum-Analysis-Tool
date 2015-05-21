@@ -269,7 +269,7 @@ class OverrideData(Tk.LabelFrame):
 		self.msgField = Tk.Label(self, text = " ".join(('Adjusting', field)))
 		self.msgValue = Tk.Label(self, text = " ".join(('Old Value:', str(old_value))))
 		self.entry = AutoEntry(self, str(self.dtype), self.dtype)
-		self.warn = Tk.Label(self, text = "Warning: Overrides will not be saved.")
+		self.warn = Tk.Label(self, text = "Warning: Overrides on unmarked data will not be saved.")
 		self.go = Tk.Button(self, text = 'GO', command = self.adjustData) 
 		self.msgField.pack(side = Tk.TOP, expand = 0, fill = Tk.BOTH)
 		self.msgValue.pack(side = Tk.TOP, expand = 0, fill = Tk.BOTH)
@@ -282,7 +282,7 @@ class OverrideData(Tk.LabelFrame):
 		result = self.entry.getSelection()
 		if result:
 			self.group.Data[self.field] = result
-			for i in self.group.sortedReturn():
+			for i in self.group.getMembers():
 				i.Data[self.field] = result
 			self.destroy()
 			self.master.withdraw()	

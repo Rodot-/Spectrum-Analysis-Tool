@@ -1,6 +1,6 @@
 from astropy.io import fits
 import os
-from Config import PATH
+from Config import PATH, bcolors
 import numpy as np
 import math
 import time
@@ -49,7 +49,7 @@ def GetRaDec(): #Gets a filename, ra and dec of a spectra for matching
 
 	TotalListLength = nFiles + len(CachedTable)
 
-	print(str(nFiles) + " New Files Found")
+	print(bcolors.HEADER + str(nFiles) + " New Files Found" + bcolors.ENDC)
 
 	print("Extracting Data...")
 
@@ -84,7 +84,7 @@ def GetRaDec(): #Gets a filename, ra and dec of a spectra for matching
 def groupData(): #matches all data, exports to Matches.rep
 
         X = GetRaDec()
-        print "Starting Matching"
+        print bcolors.HEADER + "Starting Matching", bcolors.ENDC
         X = np.sort(X, order = 'DEC')
 	t0 = time.time()
 
@@ -135,7 +135,7 @@ def groupData(): #matches all data, exports to Matches.rep
 	output.close()
 	print "Done Matching"
 
-	print str(len(X)) + " Objects Matched in " + str(time.time() - t0) + " Seconds"
+	print str(len(X)) + " Objects Matched in " + bcolors.BOLD + str(time.time() - t0) + " Seconds" + bcolors.ENDC
 
 
 def saveInterestingObjects(DataArray): #Saves the list of interesting objects
@@ -157,12 +157,14 @@ def saveInterestingObjects(DataArray): #Saves the list of interesting objects
 	InterestingFile.close()
 
 
-	print "Saved"
+	print bcolors.OKGREEN, "Saved", bcolors.ENDC
 
 def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAtches.rep file into an array of matches spectra
 	if not os.path.isfile('Matches.rep'):
 
-		print "Could not Locate 'Matches.rep', Please Run Browser.py"
+		print bcolors.WARNING
+		print "Could not Locate 'Matches.rep'",
+		print bcolors.ENDC
 		print "Would You Like to Build it From", PATH , "?"
 		yn = raw_input("y/N: ").upper()
 		if yn == 'Y':
@@ -173,7 +175,10 @@ def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAt
 
 	try:
 
-		InterestingFlag = np.loadtxt(InterestingFile,delimiter = ', ',usecols = (6,8), dtype={'names':['FILENAME', 'TAGS'], 'formats': ["<S64","<S128"]})
+		InterestingFlag = np.loadtxt(InterestingFile,delimiter = ', ',usecols = (5,6,8), dtype={'names':['REDSHIFT','FILENAME', 'TAGS'], 'formats': [">f8","<S64","<S128"]})
+
+		if len(InterestingFlag) == 0:
+			raise Exception("No Data")
 
 	except:
 
@@ -184,7 +189,8 @@ def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAt
 
 	matchList = np.loadtxt("Matches.rep", delimiter=', ', dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting", "TAGS"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64","<S256"]})
 
-	print "Text File Loaded"
+	print bcolors.OKBLUE,
+	print "Text File Loaded", bcolors.ENDC
 	print "Number of Interesting Files: ", len(InterestingFlag)
 	print "Total Number of Files: ", len(matchList)
 
@@ -192,6 +198,7 @@ def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAt
 	for i in InterestingFlag:
 		IDlist[i['FILENAME']]['TAGS'] = i['TAGS']
 		IDlist[i['FILENAME']]['Interesting'] = 'Interesting'		
+		IDlist[i['FILENAME']]['REDSHIFT'] = i['REDSHIFT']
 
 	return matchList
 

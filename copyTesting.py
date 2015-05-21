@@ -184,20 +184,28 @@ class Data(object):
 
 		T0 = time.clock()
 		print "Setting Up"
-		self.groupList = dict() #dict of groups
-		self.tagList = dict() #dict of tags
-		TAGNAMES = self.tagList.viewkeys()
+	
+		matches = getMatchesArray()
+		groups = matches['GroupID']
+		tags = matches['TAGS']
+		#Make a list of all the possible unique tags
+		tagSet = list(set([i for t in tags if t!= "None" for i in t.split()]))
+		#Make a list of of all possible unique Groups
+		groupSet = list(set(groups))
+		#use sets to initialize dictionaries, prevents lookups
+		self.groupList = dict(zip(groupSet, (Group(ID) for ID in groupSet)))
+		self.tagList = dict(zip(tagSet, (Tag(t,0) for t in tagSet))) 
+
 		#Setting Up groups and Tags
-		for spectrum in getMatchesArray(): #Go through loaded Objects
-			ID = spectrum['GroupID']
-			if not ID % 128: #Loading Info
-				print "                        \r",
-				print "Loading Object", ID,
-			currentGroup = self.groupList.setdefault(ID, Group(ID))
+		for spectrum, ID, Tags in zip(matches, groups, tags): #Go through loaded Objects
+			#if not ID % 127: #Loading Info
+			#	print "                        \r",
+			#	print "Loading Object", ID,
+			currentGroup = self.groupList[ID]
 			currentGroup.addMember(Spectrum(spectrum))
-			for tag in spectrum['TAGS'].split(): #Adding Tags
-				if tag != "None":
-					newTag = self.tagList.setdefault(tag, Tag(tag, 0))
+			if Tags != "None": #Adding Tags
+				for tag in Tags.split():
+					newTag = self.tagList[tag]
 					newTag.addMember(self.groupList[ID])
 					currentGroup.addTag(newTag)
 		self.currentData = np.array(self.groupList.keys())
@@ -209,7 +217,7 @@ class Data(object):
 			i.bestData()
 		for i in self.tagList.values():
 			i.reduced()
-		
+
 		#Sort the Data by Redshift
 		self.sort()
 		#Full data used for referencing everything contained in the Object.  Slightly more specific to user contraints
@@ -261,7 +269,11 @@ class Data(object):
 			print "currentData is empty"
 			print "Available Tags Are:"
 			for i in self.tagList.values(): print "     ",i.name, "with size", len(i)
-			sys.exit(" ".join(("IndexError:","Tag State", str(self.tagState), "is invalid for MIN_GROUP_SIZE", str(self.MIN_GROUP_SIZE))))
+			#sys.exit(" ".join(("IndexError:","Tag State", str(self.tagState), "is invalid for MIN_GROUP_SIZE", str(self.MIN_GROUP_SIZE))))
+			sys.stderr.write(" ".join(("IndexError:","Tag State", str(self.tagState), "is invalid for MIN_GROUP_SIZE", str(self.MIN_GROUP_SIZE))))
+			self.removeTagState(self.tagState[-1])
+			self.update()
+	
 
 	def size(self):
 
@@ -279,7 +291,7 @@ class Data(object):
 
 	def __getitem__(self, index):
 
-		if type(index) is str or index in self.tagList.keys():
+		if type(index) is str or index in self.tagList:
 
 			return self.tagList[index]
 
@@ -287,11 +299,11 @@ class Data(object):
 	
 			return self.groupList[index]
 
-		else: return self.groupList[index]
+		else: return self.groupList[int(index)]
 
 	def __iter__(self):
 
-		return (self[i] for i in self.currentData)
+		return (self.groupList[i] for i in self.currentData)
 
 	def __call__(self):
 

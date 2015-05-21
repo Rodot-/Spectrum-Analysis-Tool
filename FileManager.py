@@ -6,14 +6,28 @@ import HTTPServerManager as HTTP
 import numpy as np
 from DataManager import groupData
 from Config import PATH
+import sys
+import datetime
+
+FOLDERS = "downloads user resource debug".split()
+DATE = str(datetime.date.today())
+
+def CreateFolder(path):
+
+	if not os.path.isdir(path): os.system(" ".join(("mkdir",path)))
 
 def CheckFiles(): #Checks if the Following Directories Exist, Creats them if not
 
-	if not os.path.isdir("downloads"):
-
-		os.system("mkdir downloads")
+	for folder in FOLDERS: CreateFolder(folder)
+	for debug_file in os.listdir('debug'):	
+		if DATE not in debug_file:
+			os.system("rm debug/"+debug_file)
 
 CheckFiles()
+
+DEBUG = "".join(('debug/Debug_log_',DATE,'.txt'))
+sys.stderr = open(DEBUG,'a')
+sys.stderr.write('\n===============================\nProgram Started on'+DATE+'\n\n===============================\n')
 
 def LoadServers(): #Loads in server information from servers.rep
 	
