@@ -213,7 +213,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 				if line[0][i].get_visible():
 					line[0][i].set_visible(False)
 					visibility_changed = True
-				if i <= self.data().size() - diff:
+				if i <= self.data().size() - diff - 1:
 					if line[1][i].get_visible():
 						line[1][i].set_visible(False)
 						visibility_changed = True
