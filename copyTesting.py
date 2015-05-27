@@ -1,6 +1,6 @@
 import numpy as np
 from DataManager import getMatchesArray, groupData
-from Config import PATH, MIN_GROUP_SIZE
+import Config
 from astropy.io import fits
 import time
 import sys
@@ -160,7 +160,7 @@ class Spectrum(object):
 	def loadSpectrum(self, pipe = None):
 
 		if self.Flux == [] or self.Lambda == []:
-			Data = fits.open("/".join((PATH,str(self['FILENAME']))))
+			Data = fits.open("/".join((Config.PATH,str(self['FILENAME']))))
 			self.Flux = Data[1].data['flux']
 			self.Lambda = np.power(10,Data[1].data['loglam'])
 			Data.close()
@@ -180,7 +180,7 @@ class Data(object):
 
 		self.tagState = [("None",'u')]
 
-		self.MIN_GROUP_SIZE = MIN_GROUP_SIZE
+		#self.MIN_GROUP_SIZE = MIN_GROUP_SIZE
 
 		T0 = time.clock()
 		print "Setting Up"
@@ -221,7 +221,7 @@ class Data(object):
 		#Sort the Data by Redshift
 		self.sort()
 		#Full data used for referencing everything contained in the Object.  Slightly more specific to user contraints
-		self.FullData = np.array([i for i in self.currentData if self.groupList[i].size() >= self.MIN_GROUP_SIZE])
+		self.FullData = np.array([i for i in self.currentData if self.groupList[i].size() >= Config.MIN_GROUP_SIZE])
 		self.DataPosition = 0
 		self.update()
 
@@ -247,10 +247,10 @@ class Data(object):
 
 				if k == 'u':
 
-					self.currentData = np.union1d(self.currentData,np.array([j() for j in self.tagList[i].getMembers() if j.size() >= self.MIN_GROUP_SIZE ]))
+					self.currentData = np.union1d(self.currentData,np.array([j() for j in self.tagList[i].getMembers() if j.size() >= Config.MIN_GROUP_SIZE ]))
 				elif k == 'i':
 
-					self.currentData = np.intersect1d(self.currentData,np.array([j() for j in self.tagList[i].getMembers() if j.size() >= self.MIN_GROUP_SIZE ]))
+					self.currentData = np.intersect1d(self.currentData,np.array([j() for j in self.tagList[i].getMembers() if j.size() >= Config.MIN_GROUP_SIZE ]))
 
 			self.sort()
 
@@ -270,7 +270,7 @@ class Data(object):
 			print "Available Tags Are:"
 			for i in self.tagList.values(): print "     ",i.name, "with size", len(i)
 			#sys.exit(" ".join(("IndexError:","Tag State", str(self.tagState), "is invalid for MIN_GROUP_SIZE", str(self.MIN_GROUP_SIZE))))
-			sys.stderr.write(" ".join(("IndexError:","Tag State", str(self.tagState), "is invalid for MIN_GROUP_SIZE", str(self.MIN_GROUP_SIZE))))
+			sys.stderr.write(" ".join(("IndexError:","Tag State", str(self.tagState), "is invalid for MIN_GROUP_SIZE", str(Config.MIN_GROUP_SIZE))))
 			self.removeTagState(self.tagState[-1])
 			self.update()
 	

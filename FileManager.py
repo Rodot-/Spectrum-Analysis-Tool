@@ -5,7 +5,7 @@ import ftplib
 import HTTPServerManager as HTTP
 import numpy as np
 from DataManager import groupData
-from Config import PATH
+import Config
 import sys
 import datetime
 
@@ -47,7 +47,7 @@ def DownloadFits_Single(server, path): #Downloads a single fits file
 
 		LOC.cwd(path[0:path.rfind('/')]) #Adjusts the current directory
 
-		with open("/".join((PATH,file_name)),'wb') as temp:
+		with open("/".join((Config.PATH,file_name)),'wb') as temp:
 
 			LOC.retrbinary('RETR %s' % file_name, temp.write) #Saves the File
 
@@ -59,7 +59,7 @@ def DownloadFits_Single(server, path): #Downloads a single fits file
 	
 		temp.close()
 
-		with open("/".join((PATH, file_name)), 'wb') as download:
+		with open("/".join((Config.PATH, file_name)), 'wb') as download:
 
 			download.write(body)
 

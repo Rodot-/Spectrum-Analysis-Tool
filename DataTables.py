@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import time
 import Browser
-from Config import PATH, INFO_FIELDS
+import Config
 import copyTesting as DataClasses
 from astropy.io import fits
 import Transformations
@@ -316,8 +316,7 @@ class BasicDataDisplay(Tk.LabelFrame): #Class That dispalys n number of labels
 		
 class AdvancedDataDisplay(Tk.Toplevel):
 
-	Fields = INFO_FIELDS
-	#Fields = ['MJD','PLATE','FIBERID','CLASS','SUBCLASS','Z','Z_ERR','SN_MEDIAN_ALL']
+	Fields = Config.INFO_FIELDS
 
 	def __init__(self, title, Data):
 	
@@ -340,7 +339,7 @@ class AdvancedDataDisplay(Tk.Toplevel):
 			self.deiconify()
 			return
 		self.lastGroupID = Group.ID
-		Files = ["/".join((PATH, i['FILENAME'])) for i in Group.sortedReturn()]
+		Files = ["/".join((Config.PATH, i['FILENAME'])) for i in Group.sortedReturn()]
 		lenFields = len(self.Fields)
 		lenFiles = len(Files)
 		lenBDD = len(self.basicDataDisplays)

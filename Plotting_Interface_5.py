@@ -2,7 +2,8 @@ from PlottingClasses import *
 from astropy.coordinates import SkyCoord, Angle
 from astropy.units import degree
 from matplotlib.widgets import MultiCursor
-from Config import PATH, bcolors, FILES_AHEAD
+from Config import bcolors
+import Config
 import copyTesting as DataClasses
 import numpy as np
 import time
@@ -276,7 +277,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 	def backgroundTasks(self, n = 0):
 
-		if n < len(self.data.currentData) and n < self.data.DataPosition + FILES_AHEAD:
+		if n < len(self.data.currentData) and n < self.data.DataPosition + Config.FILES_AHEAD:
 			for i in self.data[self.data.currentData[n]].getMembers(): 
 
 				thread.start_new_thread(i.ploadSpectrum,())

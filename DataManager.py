@@ -1,6 +1,7 @@
 from astropy.io import fits
 import os
-from Config import PATH, bcolors
+from Config import bcolors
+import Config
 import numpy as np
 import math
 import time
@@ -165,7 +166,7 @@ def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAt
 		print bcolors.WARNING
 		print "Could not Locate 'Matches.rep'",
 		print bcolors.ENDC
-		print "Would You Like to Build it From", PATH , "?"
+		print "Would You Like to Build it From", Config.PATH , "?"
 		yn = raw_input("y/N: ").upper()
 		if yn == 'Y':
 			groupData()
