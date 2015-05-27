@@ -50,7 +50,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		#Frames
 
 		self.Navigation = Tk.Frame(self)
-
+		self.scroll_frame = Tk.Frame(self)
 		##################
 		self.Views = Tk.Toplevel()
 		self.Views.title("Tag Views")
@@ -108,6 +108,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		#Packing
 
 		#self.Manipulation.pack(side = Tk.TOP, expand = 0, fill = Tk.X)
+		self.scroll_frame.pack(side = Tk.RIGHT, expand = 0, fill = Tk.Y)
 		self.Navigation.pack(side = Tk.BOTTOM, expand = 0, fill = Tk.X)
 		self.Properties.pack(side = Tk.LEFT, expand = 0, fill = Tk.BOTH)
 		#self.Views.pack(side = Tk.RIGHT, expand = 0, fill = Tk.BOTH)	
@@ -137,6 +138,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		self.Transform.append(Transformations.reflexive)
 		self.Transform.append(Transformations.reflexive)
 		self.annotations = dict()
+		self.animVar = Tk.IntVar()
 
 		self.UpdatePlots()		
 
@@ -153,9 +155,117 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 		self.on_resize_id = self.PLOT.fig.canvas.mpl_connect('draw_event', self.on_draw)
 		self.annotate_ticks()
 
+		self.anim_switch = Tk.Checkbutton(self.scroll_frame, text = '',variable = self.animVar, command = lambda x=self.animVar: self.animation_init() if x.get() else self.animation_end())
+		self.scroller = Tk.Scrollbar(self.scroll_frame, command = self.scroll_animate)
+		self.scroller.pack(side = Tk.BOTTOM, expand = 1, fill = Tk.Y)
+		self.anim_switch.pack(expand = 0, fill = Tk.X, side = Tk.TOP)
+		self.scroller.set(0, 1)
+		self.bg2 = None
+		####
+
+	def animate(self):
+
+		self.animation_init()
+		line = self.PLOT.lines
+		l0 = len(line[0])	
+		l1 = len(line[1])	
+		i = j = 0
+		for k in xrange(100):
+			i,j = l0*k/100-1, l1*k/100-1
+			if i > 0:
+				line[0][i-1].set_visible(False)
+			if j > 0:
+				line[1][j-1].set_visible(False)
+			line[0][i].set_visible(True)
+			line[0][i+1].set_visible(True)
+			line[1][j].set_visible(True)
+			if i != l0*(k-1)/100-1 or j != l1*(k-1)/100-1:
+				self.PLOT.canvas.restore_region(self.bg2)
+				self.PLOT.ax[0].draw_artist(line[0][i])
+				self.PLOT.ax[0].draw_artist(line[0][i+1])
+				self.PLOT.ax[1].draw_artist(line[1][j])
+				self.PLOT.canvas.blit(self.PLOT.fig.bbox)
+				self.cursor.background = self.PLOT.canvas.copy_from_bbox(self.PLOT.fig.bbox)
+				time.sleep(0.02)
+	
+	def scroll_animate(self, *args):
+		
+		if not self.animVar.get(): #Disabled when not animating
+			return 'break'	
+		l0 = self.data().size()
+		pos = float(args[1]) #Mouse position in scroll bar
+		m = 1 - 1.0/(l0-1) #Scroll bar interval
+		lo = pos if m > pos > 0 else 0.0 if pos < m else m
+		result = int(lo/(m+0.001)*(l0-1))
+		lo = result*1.0/(l0-1) #lower scroll position
+		hi = lo + 1 - m #Higher scroll Position
+		self.scroller.set(lo, hi) #Set scrollbar position
+		self.animate_index(result) #Animate the resulting index	
+
+	def animate_index(self, index):
+	
+		line = self.PLOT.lines #Lines we are working with
+		if self.bg2 is None:self.animation_init()
+		visibility_changed = False #To check if we need updates
+		diff = self.Transform[0] != self.Transform[1]
+		for i in xrange(self.data().size()): #Make everything invisible if it needs to be
+			if i != index and i != index + 1:
+				if line[0][i].get_visible():
+					line[0][i].set_visible(False)
+					visibility_changed = True
+				if i <= self.data().size() - diff:
+					if line[1][i].get_visible():
+						line[1][i].set_visible(False)
+						visibility_changed = True
+		if not line[0][index+1].get_visible() or not line[0][index].get_visible(): #check which lines need to become visible
+			visibility_changed = True
+			line[0][index].set_visible(True)
+			line[0][index+1].set_visible(True)
+			line[1][index].set_visible(True)
+			if not diff:
+				line[1][index+1].set_visible(True)
+		if visibility_changed: #Draw and update the canvas
+			self.PLOT.canvas.restore_region(self.bg2)
+			self.PLOT.ax[0].draw_artist(line[0][index])
+			self.PLOT.ax[0].draw_artist(line[0][index+1])
+			self.PLOT.ax[1].draw_artist(line[1][index])	
+			if not diff:
+				self.PLOT.ax[1].draw_artist(line[1][index+1])	
+			self.PLOT.canvas.blit(self.PLOT.fig.bbox)
+			self.cursor.background = self.PLOT.canvas.copy_from_bbox(self.PLOT.fig.bbox)
+			self.bg = None #Set the bg to default.  Prevents update troubles
+
+	def animation_init(self):
+
+		for ax in self.PLOT.ax: #Make all the lines invisible
+			for line in ax.lines:
+				line.set_visible(False)
+		self.PLOT.canvas.draw() #Update the blank canvas to get a bg
+		self.bg2 = self.PLOT.canvas.copy_from_bbox(self.PLOT.fig.bbox)
+		#self.scroller.pack(side = Tk.BOTTOM, expand = 1, fill = Tk.X)
+		self.scroller.config(bg = 'red')
+		self.scroll_animate(0,0) #do the first animation
+
+	def animation_end(self):
+
+		visibility_changed = False
+		for ax in self.PLOT.ax: #Make sure all lines are visible again
+			for line in ax.lines:
+				if not line.get_visible():
+					visibility_changed = True
+					line.set_visible(True)
+		if visibility_changed:
+			self.PLOT.canvas.draw() #Redraw everything if they are not
+			self.cursor.background = self.PLOT.canvas.copy_from_bbox(self.PLOT.fig.bbox)
+		self.bg = None #Set the bg back to default	
+		self.scroller.set(0,1)
+		self.scroller.config(bg = 'grey')
+		#self.scroller.pack_forget() #get rid of the scroller
+
 	def on_draw(self, event):
 	
 		self.bg = None #Used for the on_move event with axes resizing.
+		self.bg2 = None #Used for animation axes recovery
 
 	def on_move(self,event):#http://stackoverflow.com/questions/11537374/matplotlib-basemap-popup-box/11556140#11556140
 
@@ -317,6 +427,9 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 			T = self.Transform[1]
 		self.plotCurrent(1, T)
 		self.PLOT.fig.suptitle(self.to_SDSSName())
+		if self.animVar.get(): 
+			self.animation_end()
+			self.anim_switch.deselect()
 		self.PLOT.update()
 		self.annotate_ticks()
 		self.bg = None
