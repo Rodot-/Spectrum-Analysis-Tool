@@ -1,4 +1,5 @@
 import sys
+import os
 import numpy as np
 import time
 import Browser
@@ -6,11 +7,90 @@ import Config
 import copyTesting as DataClasses
 from astropy.io import fits
 import Transformations
+import Science
 
 if sys.version_info[0] < 3:
         import Tkinter as Tk
 else:
         import tkinter as Tk
+
+class ConfigEditor(Tk.Frame):
+
+	def __init__(self, master, data, reload_func):
+
+		Tk.Frame.__init__(self, master)
+		self.master = master
+		self.reload_ = reload_func
+		self.data = data
+		self.Labels = Tk.Frame(self)
+		self.Entries = Tk.Frame(self)
+		self.min_group_size_label = Tk.Label(self.Labels, text = 'Min Group Size')
+		self.files_ahead_label = Tk.Label(self.Labels, text = 'Files Ahead to Load')
+		self.path_label = Tk.Label(self.Labels, text = 'File Path')
+		self.info_fields_label = Tk.Label(self.Labels, text = 'Information Fields')
+		self.min_group_size = AutoEntry(self.Entries, "", lambda i: int(i) if i > 0 else self.raise_())
+		self.files_ahead = AutoEntry(self.Entries, "", lambda i: int(i) if i > 0 else self.raise_())
+		self.path = AutoEntry(self.Entries, "", str) #TODO: FileBrowser
+		self.info_fields = AutoEntry(self.Entries, "", str)
+
+		self.min_group_size.insert(Tk.END, str(Config.MIN_GROUP_SIZE))
+		self.files_ahead.insert(Tk.END, str(Config.FILES_AHEAD))
+		self.path.insert(Tk.END, str(Config.PATH))
+		self.info_fields.insert(Tk.END, str(",".join(Config.INFO_FIELDS)))
+
+		self.save_var = Tk.IntVar()
+		self.save_option = Tk.Checkbutton(self, text = 'Save Current Configuration?', variable = self.save_var)
+
+
+		self.accept = Tk.Button(self, text = "Apply", command = self.apply_)
+		self.accept.pack(side = Tk.BOTTOM, expand = 1, fill = Tk.X)
+		self.save_option.pack(side = Tk.BOTTOM, expand = 1, fill = Tk.X)
+		self.Labels.pack(side = Tk.LEFT, expand = 0, fill = Tk.BOTH)
+		self.Entries.pack(side = Tk.RIGHT, expand = 1, fill = Tk.BOTH)
+		self.min_group_size.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+		self.min_group_size_label.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+		self.files_ahead.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+		self.files_ahead_label.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+		self.path.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+		self.path_label.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+
+		self.info_fields.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+		self.info_fields_label.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+
+
+	def raise_(self):
+
+		raise ValueError("Invalid Value")
+
+	def apply_(self):		
+
+		should_reload = 0
+		MIN_GROUP_SIZE = self.min_group_size.getSelection()
+		if MIN_GROUP_SIZE:
+			if MIN_GROUP_SIZE != Config.MIN_GROUP_SIZE:
+				should_reload = 1
+			Config.MIN_GROUP_SIZE = MIN_GROUP_SIZE
+		FILES_AHEAD = self.files_ahead.getSelection()
+		if FILES_AHEAD:
+			Config.FILES_AHEAD = FILES_AHEAD
+		INFO_FIELDS = self.info_fields.getSelection()
+		if INFO_FIELDS:
+			Config.INFO_FIELDS = [i.strip() for i in INFO_FIELDS.split(',')]	
+		PATH = self.path.getSelection()
+		if PATH:
+			if os.path.isdir(PATH):
+				if Config.PATH != PATH:
+					should_reload = 1
+				Config.PATH = PATH
+		if should_reload:
+			self.reload_()
+		if self.save_var.get():
+			Config.save('resource/SAT.conf')
+
+class FileBrowser(Tk.Frame): #TODO: A system file browser that does not suck
+
+	pass
+
 
 class AutoEntry(Tk.Entry):
 
@@ -365,6 +445,23 @@ class AdvancedDataDisplay(Tk.Toplevel):
 		currentFile.close()
 		return data 
 
+class BasicCheckDisplayOptions(Tk.Menu):
+
+	def __init__(self, master, CheckDisplay):
+
+		Tk.Menu.__init__(self, master, tearoff = 0)
+		self.master = master
+		#In this context, master is the class containing the Checks
+		self.CheckDisplay = CheckDisplay
+		self.add_command(label = "Remove", command = self.remove)
+
+	def do_popup(self, event):
+
+		self.tk_popup(event.x_root, event.y_root, 0)
+		
+	def remove(self):	
+
+		self.master.removeCheck(self.CheckDisplay)	
 
 class BasicCheckDisplay(Tk.LabelFrame): #Class That dispalys n number of checkbuttons
 
@@ -373,6 +470,7 @@ class BasicCheckDisplay(Tk.LabelFrame): #Class That dispalys n number of checkbu
 		Tk.LabelFrame.__init__(self, master)
 		self.titles = np.empty(n, dtype = '<S16')
 		self.buttons = []
+		self.button_options = []
 		self.w = w
 		self.data = np.empty(n, dtype = '<f8')
 		self.asButton = asButton
@@ -382,6 +480,9 @@ class BasicCheckDisplay(Tk.LabelFrame): #Class That dispalys n number of checkbu
 		self.buttonvars = [Tk.IntVar() for k in xrange(n)]
 		[self.buttons.append(Tk.Checkbutton(self, variable = self.buttonvars[i], width = w, justify = Tk.LEFT, anchor = Anch, font = ("TkDefaultFont", 10, 'bold'), indicatoron = not asButton)) for i in xrange(n)]
 		[i.pack(side = Tk.TOP, expand = 0, fill = Tk.BOTH) for i in self.buttons]
+		for i,b in enumerate(self.buttons):
+			self.button_options.append(BasicCheckDisplayOptions(self,b))
+			b.bind('<ButtonRelease-3>', self.button_options[i].do_popup) 	
 
 	def repack(self, data = None):
 
@@ -445,6 +546,17 @@ class BasicCheckDisplay(Tk.LabelFrame): #Class That dispalys n number of checkbu
 		self.titles.append("")
 		self.titles = np.array(self.titles)
 		self.data = np.array(self.data)
+
+	def removeCheck(self, check):
+
+		check.pack_forget()
+		index = self.buttons.index(check)
+		self.buttonvars.pop(index)
+		self.buttons.pop(index)
+		del Science.TAGS[self.titles[index].strip()]
+		self.titles = np.delete(self.titles, index)
+		self.data = np.delete(self.data, index)
+		self.repack()
 
 class FullDataTable(Tk.Frame):
 

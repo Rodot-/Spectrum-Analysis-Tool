@@ -537,6 +537,8 @@ class App(Tk.Tk):
 		self.tools.add_command(label="Reload Data", command = self.reloadData)
 		self.tools.add_command(label="Search", command = self.searchTool)
 		self.tools.add_command(label="Console", command = self.console)
+	
+		self.tools.add_command(label="Config", command = self.config_settings)
 		self.menubar.add_cascade(label = "View", menu = self.views)
 		self.menubar.add_cascade(label = "New", menu = self.new)
 		self.menubar.add_cascade(label = "Tools", menu = self.tools)
@@ -544,6 +546,14 @@ class App(Tk.Tk):
 		self.config(menu = self.menubar)
 		msgBox.withdraw()
 		self.deiconify()
+
+	def config_settings(self):
+
+		box = Tk.Toplevel()
+		editor = DataTables.ConfigEditor(box, self.MainWindow.data, self.reloadData)
+		editor.pack(expand = 1, fill = Tk.BOTH)
+		box.title('Configuration')
+		box.update()
 
 	def console(self): #Opens a python console 
 		"""
@@ -691,7 +701,7 @@ class App(Tk.Tk):
 			value = Value.get()
 			try:
 				if value == "Value (Float)": value = 0
-				if name.find(" ")+1: raise ValueError
+				if name.find(" ")+1: name = "_".join(name.split())
 				value = float(value)
 				name = "".join((name,":"))
 				Science.TAGS.setdefault(name, value)
