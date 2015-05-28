@@ -38,7 +38,7 @@ def GetRaDec(): #Gets a filename, ra and dec of a spectra for matching
 
 	print("Looking for New Files")
 
-	FileList = set(os.listdir(PATH)) - set(temp['FILENAME'])
+	FileList = set(os.listdir(Config.PATH)) - set(temp['FILENAME'])
 
 	#if len(set(os.listdir("downloads/SDSS"))) < len(set(temp['FILENAME'])):
 
