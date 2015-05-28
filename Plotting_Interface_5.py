@@ -393,7 +393,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 				thread.start_new_thread(i.ploadSpectrum,())
 				#i.ploadSpectrum()
 			if self.data[self.data.currentData[n]].size() > 2:
-				t = 100#*self.data[self.data.currentData[n]].size()
+				t = 100*self.data[self.data.currentData[n]].size()
 			else:
 				t = 100
 			self.after(t,self.backgroundTasks, n+1)
