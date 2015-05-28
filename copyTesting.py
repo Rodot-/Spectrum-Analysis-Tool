@@ -4,12 +4,12 @@ import Config
 from astropy.io import fits
 import time
 import sys
-from multiprocessing import Process, Pipe
+from multiprocessing import Process, Pipe, Queue, Array
 
 #TODO: Most methods haven't been checked for bugs.  
 
 #Global Variables:
-
+QUEUE = Queue()
 
 class Label(object):
 
@@ -150,7 +150,12 @@ class Spectrum(object):
 		return [self.Flux, self.Lambda]
 
 	def ploadSpectrum(self): #Background Spectrum Loading
-		
+	
+		if self.Flux != [] or self.Lambda != []: return	
+		#p = Process(target = self.loadSpectrum, args = (QUEUE,))
+		#p.start()
+		#self.Flux, self.Lambda = QUEUE.get()
+		#p.join()
 		parent, child = Pipe()
 		p = Process(target = self.loadSpectrum, args = (child,))
 		p.start()
@@ -167,6 +172,8 @@ class Spectrum(object):
 			#print "Loaded A Spectrum of", self
 		if pipe:
 			pipe.send([self.Flux, self.Lambda])
+			pipe.close()
+			#pipe.put([self.Flux, self.Lambda])
 
 	def __repr__(self):
 
