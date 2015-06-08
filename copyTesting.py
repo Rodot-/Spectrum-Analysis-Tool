@@ -5,11 +5,12 @@ from astropy.io import fits
 import time
 import sys
 from multiprocessing import Process, Pipe, Queue, Array
+import copy
+fits.HDUList.__exit__ = fits.HDUList.close
 
 #TODO: Most methods haven't been checked for bugs.  
 
 #Global Variables:
-QUEUE = Queue()
 
 class Label(object):
 
@@ -134,6 +135,7 @@ class Spectrum(object):
 		self.Data = Data
 		self.Flux = []
 		self.Lambda = []
+		self.Lines = []
 
 	def __getitem__(self, index):
 
@@ -165,11 +167,11 @@ class Spectrum(object):
 	def loadSpectrum(self, pipe = None):
 
 		if self.Flux == [] or self.Lambda == []:
-			Data = fits.open("/".join((Config.PATH,str(self['FILENAME']))))
-			self.Flux = Data[1].data['flux']
-			self.Lambda = np.power(10,Data[1].data['loglam'])
-			Data.close()
-			#print "Loaded A Spectrum of", self
+			with fits.open("/".join((Config.PATH,str(self['FILENAME'])))) as Data:
+				self.Flux = Data[1].data['flux']
+				self.Lambda = np.power(10,Data[1].data['loglam'])
+				self.Lines = Data[3].data
+			sys.stderr.write("Loaded A Spectrum of"+str(self))
 		if pipe:
 			pipe.send([self.Flux, self.Lambda])
 			pipe.close()
@@ -298,15 +300,25 @@ class Data(object):
 
 	def __getitem__(self, index):
 
-		if type(index) is str or index in self.tagList:
+		if type(index) is list or type(index) is np.ndarray:
+
+			result = copy.deepcopy(self)
+			result.currentData = result.currentData[np.array(index)]		
+			return result
+
+		elif index in self.tagList:
 
 			return self.tagList[index]
 
-		elif type(index) is int:
+		elif index in self.groupList:
 	
 			return self.groupList[index]
 
-		else: return self.groupList[int(index)]
+		elif index in self().Data:
+
+			return np.array([group[index] for group in self])
+		else:
+			print "Error: No Such index:",index
 
 	def __iter__(self):
 

@@ -8,6 +8,7 @@ import time
 import MatchingFunctions
 import fileinput
 import sys
+from multiprocessing import Pool
 
 BuildFitsList = MatchingFunctions.BuildFitsList
 FHV = MatchingFunctions.FindHeaderValue
@@ -61,8 +62,9 @@ def GetRaDec(): #Gets a filename, ra and dec of a spectra for matching
 	RADEC_index = len(CachedTable)
 
 	t0 = time.time()
+	P = Pool(4)
 
-	RADEC[RADEC_index:] = map(BuildFitsList, FileList)
+	RADEC[RADEC_index:] = P.map(BuildFitsList, FileList)
 
 	#for i in map(BuildFitsList, FileList):
 	#	RADEC[RADEC_index] = i

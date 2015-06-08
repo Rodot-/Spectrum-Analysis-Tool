@@ -6,7 +6,8 @@ import math
 import os
 import time
 import fileinput
-from Config import PATH
+import Config
+import sys
 from astropy.io import fits
 #import eventlet
 #from FileManager import LoadServers
@@ -14,6 +15,7 @@ from astropy.io import fits
 #import time
 #import sys
 INFO = ['DECOBJ','RAOBJ','Z','MJD','PLATEID','FIBERID']
+fits.HDUList.__exit__ = fits.HDUList.close
 #S = LoadServers()
 
 #TotalTransfers = 0
@@ -56,15 +58,11 @@ def BuildFitsList(path):
 
 def BuildFitsList(path):
 
-	Fopen = fits.open
-
 	try:
-		with Fopen("/".join((PATH,path)), cache = False) as FILE:
-
-        		Data = FILE[2].data
-			FILE.close() 
-	
-		return (math.cos(Data['PLUG_RA'][0]), Data['PLUG_DEC'][0], Data['PLUG_RA'][0], path, Data['Z'][0], Data['MJD'][0], Data['PLATE'][0], Data['FIBERID'][0])
+		with fits.open("/".join((Config.PATH,path)), cache = False) as FILE:
+        		Data = FILE[2].data[0]
+			print path
+		return (math.cos(Data['PLUG_RA']), Data['PLUG_DEC'], Data['PLUG_RA'], path, Data['Z'], Data['MJD'], Data['PLATE'], Data['FIBERID'])
 
 	except (IOError, IndexError):
 
