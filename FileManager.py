@@ -8,6 +8,7 @@ from DataManager import groupData
 import Config
 import sys
 import datetime
+import updater
 
 FOLDERS = "downloads user resource debug".split()
 DATE = str(datetime.date.today())
