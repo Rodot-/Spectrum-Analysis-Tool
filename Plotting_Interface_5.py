@@ -14,6 +14,7 @@ import DataTables
 from DataTables import Transformations
 import tkFont
 import _console
+import Queue, threading
 
 try:
 	import thread
@@ -401,7 +402,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 			print bcolors.OKBLUE,"Auto",bcolors.ENDC,
 			self.after(60000, self.backgroundTasks, self.data.DataPosition+1)
-			thread.start_new_thread(self.saveData,('Autosave.csv',))
+			thread.start_new_thread(self.saveData,('user/Autosave.csv',))
 
 
 	def toggleMark(self, tag, button, var):
@@ -458,7 +459,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 			Button['relief'] = Tk.RAISED
 
-	def saveData(self, Filename = "InterestingMatches.csv"):
+	def saveData(self, Filename = "user/InterestingMatches.csv"):
 
 		fields = ['MJD','PLATEID','FIBERID','RA','DEC','REDSHIFT','FILENAME','Interesting']
 
@@ -598,32 +599,75 @@ class SearchTool(Tk.Toplevel):
 			coord = float(Angle(coord).to_string('deg',decimal = True))
 		else:
 			coord = float(coord)
-		return coord	
+		return coord
+	
+class LoadingScreen(Tk.Toplevel):
 
+	def __init__(self, master):
+
+		Tk.Toplevel.__init__(self)
+		self.master = master
+		self.overrideredirect(True)
+		self.filename = 'resource/spectra.gif'
+		self.images = [Tk.PhotoImage(file = self.filename, format = "gif -index "+str(i)) for i in xrange(44)]
+		self.wm_geometry("192x158-583+334")
+		self.messageFrame = Tk.Frame(self, padx = 5, pady = 5)
+		self.imageFrame = Tk.Frame(self)
+		self.photo = Tk.Label(self.imageFrame, image = self.images[0])
+		self.head = Tk.Label(self.messageFrame, text = 'Spectrum Analysis Tool')
+		self.state = Tk.Label(self.messageFrame, text = 'Loading Spectra...')
+		self.imageFrame.pack(side = Tk.TOP, fill = Tk.BOTH, expand = 0)
+		self.messageFrame.pack(side = Tk.BOTTOM, fill = Tk.BOTH, expand = 1)
+		self.photo.pack(side = Tk.TOP, fill = Tk.BOTH, expand = 1)
+		self.head.pack(side = Tk.TOP, fill = Tk.BOTH, expand = 1)
+		self.state.pack(side = Tk.BOTTOM, fill = Tk.BOTH, expand = 1)
+
+		self.update()
+		self.master.after(100, self.cycle_image, 0)
+	
+
+	def set_state(self, string):
+		
+		self.state['text'] = string
+		self.update()
+		
+	def cycle_image(self, i):
+
+		i = i % 31
+		if self.state['text'] != 'Ready!':
+			self.photo.configure(image = self.images[i])
+			#self.update_idletasks()
+			self.master.after(100,self.cycle_image,(i+1))
 
 class App(Tk.Tk):
 
 	def __init__(self):
 
 		Tk.Tk.__init__(self)
+		Q = Queue.Queue()
+		T = threading.Thread(target = self.loadData, args = (Q,))
+		T.daemon = True
+		T.start()
 
-		msgBox = Tk.Toplevel(self)
-		msgBox.overrideredirect(True)
-		msgBox.wm_geometry("200x50-583+334")
-		msgFrame = Tk.LabelFrame(msgBox, padx = 5, pady = 5)
-		msgname = Tk.Label(msgFrame, text = "Spectrum Analysis Tool")
-		msg = Tk.Label(msgFrame, text = "Loading Spectra...")
-		msgname.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
-		msg.pack(side = Tk.BOTTOM, expand = 1, fill = Tk.BOTH)
-		msgFrame.pack(expand = 1, fill = Tk.BOTH)
+		#msgBox = Tk.Toplevel(self)
+		#msgBox.overrideredirect(True)
+		#photo = Tk.PhotoImage(file = 'resource/spectra.gif', format = 'gif -index 0')
+		#labelPhot = Tk.Label(msgBox, image = photo)
+		#msgBox.wm_geometry("200x150-583+334")
+		#msgFrame = Tk.LabelFrame(msgBox, padx = 5, pady = 5)
+		#msgname = Tk.Label(msgFrame, text = "Spectrum Analysis Tool")
+		##msg = Tk.Label(msgFrame, text = "Loading Spectra...")
+		#msgname.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
+		#msg.pack(side = Tk.BOTTOM, expand = 1, fill = Tk.BOTH)
+		#msgFrame.pack(expand = 1, fill = Tk.BOTH)
+		#labelPhot.pack(side = Tk.BOTTOM, expand = 1, fill = Tk.BOTH)
 		self.withdraw()
-		msgBox.update()
-
+		#msgBox.update()
+		self.loader = LoadingScreen(self)
 		self.title("Plotting Interface")
 		self.geometry('1200x600-100+100')
 		self.protocol("WM_DELETE_WINDOW",self.Quit)
 		##########################################
-
 		self.Info = None
 		self.Mangler = None
 		self.SearchBar = None
@@ -631,12 +675,15 @@ class App(Tk.Tk):
 		self.views = Tk.Menu(self.menubar)
 		self.new = Tk.Menu(self.menubar)
 		self.tools = Tk.Menu(self.menubar)
-		SpectraData = DataClasses.Data()
-		msg['text'] = "Loading Interface..."
-		msgBox.update()
+		#from multiprocessing import Process, Queue
+		#Q = Queue()
+		#T = Process(target = self.loadData, args = (Q,))
+		while Q.empty():
+			self.loader.update()
+		SpectraData = Q.get()
+		self.loader.set_state('Loading Interface...')
 		self.MainWindow = PlottingInterface(self, SpectraData)
-		msg['text'] = "Ready!"
-		msgBox.update()
+		self.loader.set_state('Ready!')
 		self.MainWindow.pack(expand = 1, fill = Tk.BOTH)
 
 		self.new.add_command(label = "Tag", command = self.newTag)
@@ -657,9 +704,15 @@ class App(Tk.Tk):
 		self.menubar.add_cascade(label = "Tools", menu = self.tools)
 
 		self.config(menu = self.menubar)
-		msgBox.withdraw()
+		self.loader.withdraw()
 		self.deiconify()
 
+	def loadData(self, q):
+
+		result = DataClasses.Data()	
+		q.put(result, False)
+		q.close()
+		
 	def config_settings(self):
 
 		box = Tk.Toplevel()
