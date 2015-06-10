@@ -19,7 +19,7 @@ def GetRaDec(): #Gets a filename, ra and dec of a spectra for matching
 
 	try:
 
-		temp = np.loadtxt("Matches.rep", delimiter=', ',dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64"]})
+		temp = np.loadtxt("user/Matches.rep", delimiter=', ',dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64"]})
 
 
 		if len(temp) == 0:
@@ -91,7 +91,7 @@ def groupData(): #matches all data, exports to Matches.rep
         X = np.sort(X, order = 'DEC')
 	t0 = time.time()
 
-        output = open('Matches.rep', 'wb')
+        output = open('user/Matches.rep', 'wb')
 
 	output.write('#GroupID, MJD, PLATEID, FIBERID, RA, DEC, REDSHIFT, FILENAME, ARGS, TAGS\n')
 
@@ -147,7 +147,7 @@ def saveInterestingObjects(DataArray): #Saves the list of interesting objects
 
 	InterestingList = [i for i in DataArray if i['Interesting'] == 'Interesting']
 
-	InterestingFile = open('InterestingMatches.rep','wb')
+	InterestingFile = open('user/InterestingMatches.csv','wb')
         InterestingFile.write("#MJD, PLATEID, FIBERID, RA, DEC, Z, FILENAME, ARGS\n")
 
 	#Saves these objects in the same format as above
@@ -162,8 +162,8 @@ def saveInterestingObjects(DataArray): #Saves the list of interesting objects
 
 	print bcolors.OKGREEN, "Saved", bcolors.ENDC
 
-def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAtches.rep file into an array of matches spectra
-	if not os.path.isfile('Matches.rep'):
+def getMatchesArray(InterestingFile = 'user/InterestingMatches.csv'): #Parses the MAtches.rep file into an array of matches spectra
+	if not os.path.isfile('user/Matches.rep'):
 
 		print bcolors.WARNING
 		print "Could not Locate 'Matches.rep'",
@@ -186,11 +186,11 @@ def getMatchesArray(InterestingFile = 'InterestingMatches.csv'): #Parses the MAt
 	except:
 
 		try:
-			return getMatchesArray('Autosave.csv')
+			return getMatchesArray('user/Autosave.csv')
 		except:
 			InterestingFlag = []
 
-	matchList = np.loadtxt("Matches.rep", delimiter=', ', dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting", "TAGS"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64","<S256"]})
+	matchList = np.loadtxt("user/Matches.rep", delimiter=', ', dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting", "TAGS"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64","<S256"]})
 
 	print bcolors.OKBLUE,
 	print "Text File Loaded", bcolors.ENDC
