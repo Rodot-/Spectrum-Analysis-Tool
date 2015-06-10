@@ -12,7 +12,7 @@ import os, shutil
 if __name__ == '__main__':
 	files = ['InterestingMatches.csv','Autosave.csv','Matches.rep']
 	for f in files:
-		if os.path.isfile(f):
+		if os.path.isfile(f) and not os.path.isfile('user/'+f):
 			shutil.move(f,'user/')	
 
 #Connection with the update server

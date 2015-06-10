@@ -14,7 +14,7 @@ import DataTables
 from DataTables import Transformations
 import tkFont
 import _console
-import Queue, threading
+from multiprocessing import Process, Pipe
 
 try:
 	import thread
@@ -603,9 +603,10 @@ class SearchTool(Tk.Toplevel):
 	
 class LoadingScreen(Tk.Toplevel):
 
-	def __init__(self, master):
+	def __init__(self,conn = None, master = None):
 
 		Tk.Toplevel.__init__(self)
+		self.conn = conn
 		self.master = master
 		self.overrideredirect(True)
 		self.filename = 'resource/spectra.gif'
@@ -623,8 +624,9 @@ class LoadingScreen(Tk.Toplevel):
 		self.state.pack(side = Tk.BOTTOM, fill = Tk.BOTH, expand = 1)
 
 		self.update()
-		self.master.after(100, self.cycle_image, 0)
-	
+		self.after(100, self.cycle_image, 0)
+		self.after(200, self.checkPipe)	
+
 
 	def set_state(self, string):
 		
@@ -636,34 +638,35 @@ class LoadingScreen(Tk.Toplevel):
 		i = i % 31
 		if self.state['text'] != 'Ready!':
 			self.photo.configure(image = self.images[i])
-			#self.update_idletasks()
-			self.master.after(100,self.cycle_image,(i+1))
+			self.after(100,self.cycle_image,(i+1))
+
+	def checkPipe(self):
+
+		if not self.conn.poll():
+			self.after(100, self.checkPipe)
+		else:
+			result = self.conn.recv()
+			if result == 'withdraw':
+				self.withdraw()
+				self.after_idle(self.master.quit)
+				self.after_idle(self.master.destroy())
+			else: 
+				self.set_state(result)	
+				self.after(100, self.checkPipe)
+
+def start_loader(conn):
+
+	small_root = Tk.Tk()
+	small_root.withdraw()
+	loader = LoadingScreen(conn, small_root)
+	small_root.mainloop()		
 
 class App(Tk.Tk):
 
 	def __init__(self):
 
 		Tk.Tk.__init__(self)
-		Q = Queue.Queue()
-		T = threading.Thread(target = self.loadData, args = (Q,))
-		T.daemon = True
-		T.start()
-
-		#msgBox = Tk.Toplevel(self)
-		#msgBox.overrideredirect(True)
-		#photo = Tk.PhotoImage(file = 'resource/spectra.gif', format = 'gif -index 0')
-		#labelPhot = Tk.Label(msgBox, image = photo)
-		#msgBox.wm_geometry("200x150-583+334")
-		#msgFrame = Tk.LabelFrame(msgBox, padx = 5, pady = 5)
-		#msgname = Tk.Label(msgFrame, text = "Spectrum Analysis Tool")
-		##msg = Tk.Label(msgFrame, text = "Loading Spectra...")
-		#msgname.pack(side = Tk.TOP, expand = 1, fill = Tk.BOTH)
-		#msg.pack(side = Tk.BOTTOM, expand = 1, fill = Tk.BOTH)
-		#msgFrame.pack(expand = 1, fill = Tk.BOTH)
-		#labelPhot.pack(side = Tk.BOTTOM, expand = 1, fill = Tk.BOTH)
 		self.withdraw()
-		#msgBox.update()
-		self.loader = LoadingScreen(self)
 		self.title("Plotting Interface")
 		self.geometry('1200x600-100+100')
 		self.protocol("WM_DELETE_WINDOW",self.Quit)
@@ -675,15 +678,10 @@ class App(Tk.Tk):
 		self.views = Tk.Menu(self.menubar)
 		self.new = Tk.Menu(self.menubar)
 		self.tools = Tk.Menu(self.menubar)
-		#from multiprocessing import Process, Queue
-		#Q = Queue()
-		#T = Process(target = self.loadData, args = (Q,))
-		while Q.empty():
-			self.loader.update()
-		SpectraData = Q.get()
-		self.loader.set_state('Loading Interface...')
+		SpectraData = DataClasses.Data()
+		OUT.send('Loading Interface...')
 		self.MainWindow = PlottingInterface(self, SpectraData)
-		self.loader.set_state('Ready!')
+		OUT.send('Ready!')
 		self.MainWindow.pack(expand = 1, fill = Tk.BOTH)
 
 		self.new.add_command(label = "Tag", command = self.newTag)
@@ -704,7 +702,7 @@ class App(Tk.Tk):
 		self.menubar.add_cascade(label = "Tools", menu = self.tools)
 
 		self.config(menu = self.menubar)
-		self.loader.withdraw()
+		OUT.send('withdraw')
 		self.deiconify()
 
 	def loadData(self, q):
@@ -909,6 +907,9 @@ class App(Tk.Tk):
 
 if __name__ == '__main__':
 
+	IN, OUT = Pipe(False)
+	P = Process(target = start_loader, args = (IN,))
+	P.start()
 	app = App()
 	app.mainloop()
 
