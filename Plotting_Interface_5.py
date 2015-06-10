@@ -394,7 +394,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 				thread.start_new_thread(i.ploadSpectrum,())
 				#i.ploadSpectrum()
 			if self.data[self.data.currentData[n]].size() > 2:
-				t = 100*self.data[self.data.currentData[n]].size()
+				t = 200*self.data[self.data.currentData[n]].size()
 			else:
 				t = 100
 			self.after(t,self.backgroundTasks, n+1)
@@ -610,13 +610,15 @@ class LoadingScreen(Tk.Toplevel):
 		self.master = master
 		self.overrideredirect(True)
 		self.filename = 'resource/spectra.gif'
-		self.images = [Tk.PhotoImage(file = self.filename, format = "gif -index "+str(i)) for i in xrange(44)]
+		self.images = [Tk.PhotoImage(file = self.filename, format = "gif -index "+str(i)) for i in xrange(35)]
 		self.wm_geometry("192x158-583+334")
-		self.messageFrame = Tk.Frame(self, padx = 5, pady = 5)
-		self.imageFrame = Tk.Frame(self)
+		self.borderFrame = Tk.LabelFrame(self, borderwidth = 5)
+		self.messageFrame = Tk.Frame(self.borderFrame, padx = 5, pady = 5)
+		self.imageFrame = Tk.Frame(self.borderFrame)
 		self.photo = Tk.Label(self.imageFrame, image = self.images[0])
 		self.head = Tk.Label(self.messageFrame, text = 'Spectrum Analysis Tool')
 		self.state = Tk.Label(self.messageFrame, text = 'Loading Spectra...')
+		self.borderFrame.pack(fill = Tk.BOTH, expand = 1)
 		self.imageFrame.pack(side = Tk.TOP, fill = Tk.BOTH, expand = 0)
 		self.messageFrame.pack(side = Tk.BOTTOM, fill = Tk.BOTH, expand = 1)
 		self.photo.pack(side = Tk.TOP, fill = Tk.BOTH, expand = 1)
@@ -635,7 +637,7 @@ class LoadingScreen(Tk.Toplevel):
 		
 	def cycle_image(self, i):
 
-		i = i % 31
+		i = i % len(self.images)
 		if self.state['text'] != 'Ready!':
 			self.photo.configure(image = self.images[i])
 			self.after(100,self.cycle_image,(i+1))
