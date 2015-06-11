@@ -651,7 +651,7 @@ class LoadingScreen(Tk.Toplevel):
 			if result == 'withdraw':
 				self.withdraw()
 				self.after_idle(self.master.quit)
-				self.after_idle(self.master.destroy())
+				self.after_idle(self.master.destroy)
 			else: 
 				self.set_state(result)	
 				self.after(100, self.checkPipe)
