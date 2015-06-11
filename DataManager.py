@@ -13,6 +13,16 @@ from multiprocessing import Pool
 BuildFitsList = MatchingFunctions.BuildFitsList
 FHV = MatchingFunctions.FindHeaderValue
 
+def quick_loadtxt(file_name, delimiter = ',', usecols = None, dtype = None):
+
+	Data = []
+	with open(file_name,'rb') as f:
+		f.readline()
+		for line in f:
+			Data.append(tuple(line.strip().split(delimiter)))
+	Data = np.array(Data, dtype = dtype)
+	return Data if usecols is None else Data[usecols]
+
 def GetRaDec(): #Gets a filename, ra and dec of a spectra for matching
 
 	print("Getting Data")
@@ -190,7 +200,8 @@ def getMatchesArray(InterestingFile = 'user/InterestingMatches.csv'): #Parses th
 		except:
 			InterestingFlag = []
 
-	matchList = np.loadtxt("user/Matches.rep", delimiter=', ', dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting", "TAGS"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64","<S256"]})
+	#matchList = np.loadtxt("user/Matches.rep", delimiter=', ', dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting", "TAGS"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64","<S256"]})
+	matchList = quick_loadtxt("user/Matches.rep", delimiter=', ', dtype=zip(["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting", "TAGS"],["int","int","int","int","float","float","float","<S64","<S16","<S128"]))
 
 	print bcolors.OKBLUE,
 	print "Text File Loaded", bcolors.ENDC
