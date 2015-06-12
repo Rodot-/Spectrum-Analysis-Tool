@@ -160,6 +160,7 @@ class Spectrum(object):
 		#p.join()
 		parent, child = Pipe()
 		p = Process(target = self.loadSpectrum, args = (child,))
+		p.daemon = True
 		p.start()
 		self.Flux, self.Lambda = parent.recv()
 		p.join()

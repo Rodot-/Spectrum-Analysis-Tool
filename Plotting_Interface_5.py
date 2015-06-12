@@ -650,6 +650,7 @@ class LoadingScreen(Tk.Toplevel):
 			result = self.conn.recv()
 			if result == 'withdraw':
 				self.withdraw()
+				self.after_idle(self.conn.close)
 				self.after_idle(self.master.quit)
 				self.after_idle(self.master.destroy)
 			else: 
@@ -913,5 +914,6 @@ if __name__ == '__main__':
 	P = Process(target = start_loader, args = (IN,))
 	P.start()
 	app = App()
+	P.join()
 	app.mainloop()
 
