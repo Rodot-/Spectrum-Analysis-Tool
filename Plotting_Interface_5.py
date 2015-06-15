@@ -388,7 +388,7 @@ class PlottingInterface(Tk.Frame): #Example of a window application inside a fra
 
 	def backgroundTasks(self, n = 0):
 
-		if n < len(self.data.currentData) and n < self.data.DataPosition + Config.FILES_AHEAD:
+		if self.data.DataPosition - Config.FILES_AHEAD < n < len(self.data.currentData) and n < self.data.DataPosition + Config.FILES_AHEAD:
 			for i in self.data[self.data.currentData[n]].getMembers(): 
 
 				thread.start_new_thread(i.ploadSpectrum,())
