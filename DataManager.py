@@ -198,11 +198,35 @@ def getMatchesArray(InterestingFile = 'user/InterestingMatches.csv'): #Parses th
 		try:
 			return getMatchesArray('user/Autosave.csv')
 		except:
-			InterestingFlag = []
+			InterestingFlag = np.empty((0,), dtype = [('FILENAME','<S64')])
 
 	#matchList = np.loadtxt("user/Matches.rep", delimiter=', ', dtype={'names':["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting", "TAGS"], 'formats': ["int","int","int","int","float","float","float","<S64","<S64","<S256"]})
 	matchList = quick_loadtxt("user/Matches.rep", delimiter=', ', dtype=zip(["GroupID","MJD","PLATEID","FIBERID","RA","DEC","REDSHIFT","FILENAME","Interesting", "TAGS"],["int","int","int","int","float","float","float","<S64","<S16","<S128"]))
+	#Making sure the files in the matchList or Interesting list actually exist
+	print bcolors.WARNING
+	file_cache = set(os.listdir(Config.PATH))
+	match_files = set(matchList['FILENAME'])
+	interest_files = set(InterestingFlag['FILENAME'])	
+	mismatches = file_cache ^ match_files
+	if mismatches:
+		mismatches = set([i for i in mismatches if i.endswith('.fits')])
+		if mismatches:
+			extras = match_files & mismatches
+			if extras:	
+				print "Matches.rep has too many files"
+				print "Removing Extra Files" #TODO
+				matchList = matchList[~np.in1d(matchList['FILENAME'], list(extras))]
+				match_files = set(matchList['FILENAME'])
+			if file_cache & mismatches:
+				print "New Files Found"
+				print "Please run Matching"
 
+	extras = interest_files - match_files 
+	if extras:
+		print "Interesting Matches has too many files"
+		print "Removing Extra Files" #TODO
+		InterestingFlag = InterestingFlag[~np.in1d(InterestingFlag['FILENAME'], list(extras))]
+	################
 	print bcolors.OKBLUE,
 	print "Text File Loaded", bcolors.ENDC
 	print "Number of Interesting Files: ", len(InterestingFlag)
