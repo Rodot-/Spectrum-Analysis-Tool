@@ -3,14 +3,119 @@ from DataManager import getMatchesArray, groupData
 import Config
 from astropy.io import fits
 import time
-import sys
+import sys, os
 from multiprocessing import Process, Pipe, Queue, Array
 import copy
+import cPickle
 fits.HDUList.__exit__ = fits.HDUList.close
 
 #TODO: Most methods haven't been checked for bugs.  
 
 #Global Variables:
+
+class FileExporter(object):
+
+	"""This class is used to export one of the data files 
+	into to the desired format for future use.  Currently only
+	two file formats are supported. (See formats) """
+
+	formats = [
+	'fits',
+	'csv'
+	]
+
+	def __init__(self, data, **kwargs):
+
+		default_format = 'csv'
+		default_name = 'ExportedMatches'
+		default_group = None
+		default_tag = None
+
+		self.data = data
+		self.defaults = dict(format = default_format, name = default_name, tag = default_tag, group = default_group) 
+		self.params = self.defaults.copy()
+		self.params.update(kwargs)
+
+	def save(self):
+
+		print 'Saving...'
+
+		if self.params['format'] == 'csv':
+
+			self.export_csv(True)
+
+		elif self.params['format'] == 'fits':
+
+			self.export_fits()
+		print 'Saved', self.params['name']
+
+
+	def assert_params(self, revert_to_default = False):
+		"""Make Sure that the params are valid
+		if not, will revert to default values or 
+		raise an exception depending on the arguments"""
+
+		invalid = dict()
+		
+		#First, make sure the file format is valid
+		invalid['format'] = self.params['format'] not in FileExporter.formats		
+		#Check to See if we are overwriting
+		#invalid['name'] = os.path.isfile(self.params['name'])
+
+		#Check to make sure we are using a valid group or tag
+		invalid['tag'] = self.params['tag'] not in self.data.tagList and self.params['tag'] is not None
+		invalid['group'] = self.params['group'] not in self.data.groupList and self.params['group'] is not None
+ 		#Get The list of invalid keys
+		invalid_keys = filter(invalid.get, invalid)
+
+		if invalid_keys:	
+
+			if revert_to_default:	
+				for key in invalid_keys: 
+					self.params[key] = self.defaults[key]
+			else:
+				raise Exception(",".join(invalid_keys))
+
+	def prepare_data(self):
+
+		self.assert_params(False)		
+		headers = ['MJD', 'PLATEID', 'FIBERID', 'RA', 'DEC', 'REDSHIFT']
+		formats = ['u2','u2','u2','f4','f4','f4']		
+		IDS = []
+		if self.params['group'] is not None:
+			IDS.append(self.params['group'])	
+
+		if self.params['tag'] is not None:
+			IDS.extend([j() for j in self.data[self.params['tag']].getMembers()])	
+		elif self.params['tag'] is self.params['group']:
+			IDS = self.data.groupList.keys()
+
+		spectra = (j for i in IDS for j in self.data[i].getMembers())
+
+		return formats, headers, spectra		
+
+	def export_csv(self, header = True):
+
+		formats, headers, spectra = self.prepare_data()
+		
+		head = '#'+','.join(headers)+'\n' if header else ''
+
+		with open(self.params['name'],'wb') as f:
+			f.write(head)
+			f.write('\n'.join([','.join(map(str,[spec[head] for head in headers])) for spec in spectra]))
+
+	def export_fits(self):
+
+		formats, headers, spectra = self.prepare_data()	
+		columns = []
+		M,P,F,RA,DEC,Z = zip(*[[spec[head] for head in headers] for spec in spectra])
+		data = dict(zip(headers,(M,P,F,RA,DEC,Z)))
+		for head, form in zip(headers, formats):
+			form = form.replace('u2','J').replace('f4','E')	
+			columns.append(fits.Column(name = head, format = form, array = np.asarray(data[head])))
+		tbhdu = fits.BinTableHDU.from_columns(columns)  
+		tbhdu.writeto(self.params['name'], clobber = True)
+
 
 class Label(object):
 
@@ -473,6 +578,10 @@ class Data(object):
 		return subset
 
 if __name__ == '__main__':
+
+	EX = FileExporter(Data(), format = 'fits', name = 'Group2', group = 2)
+	EX.save()
+	exit()
 
 	data = Data()
 	data.sort('RA')

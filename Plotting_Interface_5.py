@@ -678,6 +678,8 @@ class App(Tk.Tk):
 		self.Mangler = None
 		self.SearchBar = None
 		self.menubar = Tk.Menu(self)
+		self.File = Tk.Menu(self.menubar)
+		self.export = Tk.Menu(self.File)
 		self.views = Tk.Menu(self.menubar)
 		self.new = Tk.Menu(self.menubar)
 		self.tools = Tk.Menu(self.menubar)
@@ -686,6 +688,10 @@ class App(Tk.Tk):
 		self.MainWindow = PlottingInterface(self, SpectraData)
 		OUT.send('Ready!')
 		self.MainWindow.pack(expand = 1, fill = Tk.BOTH)
+
+		self.File.add_command(label = "Save", command = self.MainWindow.saveData)
+		self.export.add_command(label = "Group", command = self.export_group)
+		self.export.add_command(label = "All", command = self.export_all)
 
 		self.new.add_command(label = "Tag", command = self.newTag)
 		self.views.add_command(label="Tags", command=self.tagSelection)
@@ -700,13 +706,26 @@ class App(Tk.Tk):
 		self.tools.add_command(label="Console", command = self.console)
 	
 		self.tools.add_command(label="Config", command = self.config_settings)
+		self.menubar.add_cascade(label = "File", menu = self.File)
 		self.menubar.add_cascade(label = "View", menu = self.views)
 		self.menubar.add_cascade(label = "New", menu = self.new)
 		self.menubar.add_cascade(label = "Tools", menu = self.tools)
 
+		self.File.add_cascade(label = "Export", menu = self.export)
+
 		self.config(menu = self.menubar)
 		OUT.send('withdraw')
 		self.deiconify()
+
+	def export_group(self):
+
+		ex = DataTables.Exporter(self, self.MainWindow.data)
+		ex.save(group = self.MainWindow.data().ID)
+
+	def export_all(self):
+
+		ex = DataTables.Exporter(self, self.MainWindow.data)
+		ex.save()
 
 	def loadData(self, q):
 

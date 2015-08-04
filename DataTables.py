@@ -8,12 +8,43 @@ import copyTesting as DataClasses
 from astropy.io import fits
 import Transformations
 import Science
+import tkFileDialog
 
 if sys.version_info[0] < 3:
         import Tkinter as Tk
 else:
         import tkinter as Tk
 
+
+class Exporter(object):
+
+	def __init__(self, master, data):
+
+		self.ex = DataClasses.FileExporter(data)
+		self.tags = data.tagList.keys()
+		self.master = master
+
+	def browse(self):
+
+		filename = tkFileDialog.asksaveasfilename(filetypes = [('fits files',('.fits','.fit')), ('csv files','.csv')], initialdir = '.', initialfile = self.ex.params['name'], parent = self.master)
+		return filename	
+	
+	def save(self, group = None, tag = None):
+
+		filename = self.browse()
+		if not filename: return
+		print filename
+		if filename.endswith('.fits') or filename.endswith('.fit'):
+			self.ex.params['format'] = 'fits'
+		elif filename.endswith('.csv'):
+			self.ex.params['format'] = 'csv'
+		else:
+			self.ex.params['format'] = 'csv'
+		self.ex.params['name'] = filename 
+		self.ex.params['group'] = group
+		self.ex.params['tag'] = tag
+		self.ex.save()	
+	
 class ConfigEditor(Tk.Frame):
 
 	def __init__(self, master, data, reload_func):
@@ -605,6 +636,13 @@ class FullDataTable(Tk.Frame):
 #		self.Props.pack(expand = 0, fill = Tk.BOTH, side = Tk.LEFT)
 
 
+if __name__ == '__main__':
+
+	sys.stderr = sys.__stderr__
+	root = Tk.Tk()
+	browser = Exporter(root, DataClasses.Data())
+	browser.save()
+	root.mainloop()
 '''
 class App(Tk.Tk):
         def __init__(self):
